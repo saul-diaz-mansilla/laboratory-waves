@@ -10,6 +10,7 @@ import scipy.signal as sps
 import scipy.optimize as spo
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
 T = 30
 w = 2*np.pi/T
@@ -29,7 +30,7 @@ def load_dataset(path):
     comments = re.search(r"Comments: (.*)$", open(path).read(), re.MULTILINE)[1]
     return timestamp, output_voltage, output_current, thermistor_temperatures, comments
 
-timestamp, output_voltage, output_current, thermistor_temperatures, comments = (load_dataset("data/thermal/task_1_6_"+str(int(T))+".csv"))
+timestamp, output_voltage, output_current, thermistor_temperatures, comments = (load_dataset(os.path.join(os.path.dirname(__file__), "../../data/thermal/task_1_6_"+str(int(T))+".csv")))
 
 total = len(timestamp)
 #timestamp = timestamp[8*total//9:]
