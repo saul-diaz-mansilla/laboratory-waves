@@ -12,21 +12,21 @@ import src.utils.landaubeta as lb
 lb.use_latex_fonts()
 
 # Length of RL circuits & transmission line
-l = 38  # sections
-l_0 = 1 # sections
+l_t = 38  # sections
+l_0 = 1  # sections
 
 # Inductance and capacitance
 L = 330e-6  # H / section
-dL = .2 * L
-C = .015e-6 # F / section
-dC = .1 * C
+dL = 0.2 * L
+C = 0.015e-6  # F / section
+dC = 0.1 * C
 
 # Cutoff frequency
 w_c = 2 / np.sqrt(L * C)
 
 # Manual data
 path = "data/electrical/task_2_6.xlsx"
-df = pd.read_excel(path, header=None, engine='openpyxl')
+df = pd.read_excel(path, header=None, engine="openpyxl")
 
 n = df.iloc[2:35, 0].to_numpy()
 in_out = df.iloc[2:35, 1].to_numpy()
@@ -41,11 +41,13 @@ v0_m = v0_m / 2
 dv0_m = dv0_m / 2
 v38_m = v38_m / 2
 dv38_m = dv38_m / 2
-k = np.pi * n / l
+k = np.pi * n / l_t
+
 
 # Fitting function
 def sine(t, A, w, phi, c):
     return A * np.sin(w * t + phi) + c
+
 
 # Loop over oscilloscope data to find more precise values
 w = []
@@ -70,12 +72,12 @@ for i in range(len(n)):
     popt38, pcov38 = opt.curve_fit(sine, t, v_38, p0=[v38_m[i], w_m[i], 0, 0])
     popt_in, pcov_in = opt.curve_fit(sine, t, v_in, p0=[np.max(v_in), w_m[i], 0, 0])
 
-    if i == None:
+    if i == 0:
         plt.figure()
-        plt.plot(t, v_0, label='v0 data')
-        plt.plot(t, sine(t, *popt0), label='v0 fit')
-        plt.plot(t, v_38, label='v38 data')
-        plt.plot(t, sine(t, *popt38), label='v38 fit')
+        plt.plot(t, v_0, label="v0 data")
+        plt.plot(t, sine(t, *popt0), label="v0 fit")
+        plt.plot(t, v_38, label="v38 data")
+        plt.plot(t, sine(t, *popt38), label="v38 fit")
         plt.legend()
         plt.show()
 
@@ -103,12 +105,12 @@ dvmax_in = np.array(dvmax_in)
 phase_diffs = np.array(phase_diffs)
 
 ratio = vmax_38 / vmax_0
-d_ratio = ratio * np.sqrt((dvmax_38 / vmax_38)**2 + (dvmax_0 / vmax_0)**2)
+d_ratio = ratio * np.sqrt((dvmax_38 / vmax_38) ** 2 + (dvmax_0 / vmax_0) ** 2)
 
 fig_dir = "figures/"
 
 plt.figure()
-plt.errorbar(w, ratio, yerr=d_ratio, fmt='.', label="Experimental")
+plt.errorbar(w, ratio, yerr=d_ratio, fmt=".", label="Experimental")
 plt.title("Ratio of amplitudes")
 plt.xlabel(r"$\omega$ (s$^{-1}$)")
 plt.ylabel(r"$v_{38}/v_{0}$")
@@ -116,16 +118,18 @@ plt.legend()
 plt.savefig(fig_dir + "ratio.pdf")
 
 plt.figure()
-plt.errorbar(k, w, yerr=dw, fmt='.', label="Experimental")
+plt.errorbar(k, w, yerr=dw, fmt=".", label="Experimental")
 k_theo = np.linspace(0, np.pi, 1000)
 plt.plot(k_theo, w_c * np.abs(np.sin(k_theo * l_0 / 2)), label="Theoretical (calc)")
+
 
 def dispersion_func(k, wc):
     return wc * np.abs(np.sin(k * l_0 / 2))
 
+
 popt_wc, _ = opt.curve_fit(dispersion_func, k, w, p0=[w_c])
 wc_fit = popt_wc[0]
-plt.plot(k_theo, dispersion_func(k_theo, wc_fit), '--', label="Theoretical (fit)")
+plt.plot(k_theo, dispersion_func(k_theo, wc_fit), "--", label="Theoretical (fit)")
 
 plt.title("Dispersion relation")
 plt.xlabel(r"k (sections$^{-1}$)")
@@ -147,18 +151,18 @@ w_fit_new = dispersion_func(k_new, wc_fit)
 vg_fit = wc_fit * (l_0 / 2) * np.cos(k_new * l_0 / 2)
 
 plt.figure()
-plt.plot(w_new, vp, label='Phase velocity')
-plt.plot(w_new, vg, label='Group velocity')
-plt.plot(w_fit_new, vg_fit, '--', label='Group velocity (fit)')
+plt.plot(w_new, vp, label="Phase velocity")
+plt.plot(w_new, vg, label="Group velocity")
+plt.plot(w_fit_new, vg_fit, "--", label="Group velocity (fit)")
 plt.xlabel(r"$\omega$ (s$^{-1}$)")
 plt.ylabel(r"Velocity (sections/s)")
 plt.legend()
 plt.savefig(fig_dir + "velocities.pdf")
 
 plt.figure()
-plt.errorbar(w, vmax_in, yerr=dvmax_in, fmt='.', label=r'$v_{in}$')
-plt.errorbar(w, vmax_0, yerr=dvmax_0, fmt='.', label=r'$v_{0}$')
-plt.errorbar(w, vmax_38, yerr=dvmax_38, fmt='.', label=r'$v_{38}$')
+plt.errorbar(w, vmax_in, yerr=dvmax_in, fmt=".", label=r"$v_{in}$")
+plt.errorbar(w, vmax_0, yerr=dvmax_0, fmt=".", label=r"$v_{0}$")
+plt.errorbar(w, vmax_38, yerr=dvmax_38, fmt=".", label=r"$v_{38}$")
 plt.xlabel(r"$\omega$ (s$^{-1}$)")
 plt.ylabel("Amplitude (V)")
 plt.legend()
