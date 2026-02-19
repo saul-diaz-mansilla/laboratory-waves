@@ -7,37 +7,11 @@ L = 330e-6
 C = 15e-9
 C_end = 7.5e-9
 R_in = 150
-R_out = np.sqrt(L / C)  # Matched impedance
 V_in = 2.5
 N = 41  # Nodes 0 to 40
-
-# 2. Build the Matrices
-# Capacitance Matrix (Mc)
-Mc = np.diag([C_end] + [C] * (N - 2) + [C_end])
-
-# Resistance Matrix (Mr)
-Mr = np.zeros((N, N))
-Mr[0, 0] = 1 / R_in
-Mr[-1, -1] = 1 / R_out
-
-# Inductance Matrix (Ml)
-Ml = np.zeros((N, N))
-Ml[0, 0] = 1 / L
-Ml[0, 1] = -1 / L
-for i in range(1, N - 1):
-    Ml[i, i - 1] = -1 / L
-    Ml[i, i] = 2 / L
-    Ml[i, i + 1] = -1 / L
-Ml[-1, -2] = -1 / L
-Ml[-1, -1] = 1 / L
-
-# Isolate the second derivative (create A_R and A_L)
-Mc_inv = np.linalg.inv(Mc)
-A_R = Mc_inv @ Mr
-A_L = Mc_inv @ Ml
+f_c = (2 / np.sqrt(L * C)) / (2 * np.pi)
 
 # 3. Setup the Integration
-f_c = (2 / np.sqrt(L * C)) / (2 * np.pi)
 # 30 points to keep computation time reasonable
 frequencies = np.linspace(20, f_c, 30)
 ratio_V38_V0 = []
@@ -46,6 +20,34 @@ print("Starting numerical integration. This will take a moment...")
 
 for idx, f in enumerate(frequencies):
     omega = 2 * np.pi * f
+    R_out = np.sqrt(L / C) / np.sqrt(
+        1 - (omega / (2 * np.pi * f_c)) ** 2
+    )  # Matched impedance
+
+    # 2. Build the Matrices
+    # Capacitance Matrix (Mc)
+    Mc = np.diag([C_end] + [C] * (N - 2) + [C_end])
+
+    # Resistance Matrix (Mr)
+    Mr = np.zeros((N, N))
+    Mr[0, 0] = 1 / R_in
+    Mr[-1, -1] = 1 / R_out
+
+    # Inductance Matrix (Ml)
+    Ml = np.zeros((N, N))
+    Ml[0, 0] = 1 / L
+    Ml[0, 1] = -1 / L
+    for i in range(1, N - 1):
+        Ml[i, i - 1] = -1 / L
+        Ml[i, i] = 2 / L
+        Ml[i, i + 1] = -1 / L
+    Ml[-1, -2] = -1 / L
+    Ml[-1, -1] = 1 / L
+
+    # Isolate the second derivative (create A_R and A_L)
+    Mc_inv = np.linalg.inv(Mc)
+    A_R = Mc_inv @ Mr
+    A_L = Mc_inv @ Ml
 
     # Define the ODE function for solve_ivp
     def odefunc(t, Y):

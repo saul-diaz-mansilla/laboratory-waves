@@ -72,14 +72,14 @@ for i in range(len(n)):
     popt38, pcov38 = opt.curve_fit(sine, t, v_38, p0=[v38_m[i], w_m[i], 0, 0])
     popt_in, pcov_in = opt.curve_fit(sine, t, v_in, p0=[np.max(v_in), w_m[i], 0, 0])
 
-    if i == 0:
-        plt.figure()
-        plt.plot(t, v_0, label="v0 data")
-        plt.plot(t, sine(t, *popt0), label="v0 fit")
-        plt.plot(t, v_38, label="v38 data")
-        plt.plot(t, sine(t, *popt38), label="v38 fit")
-        plt.legend()
-        plt.show()
+    # if i == 0:
+    #     plt.figure()
+    #     plt.plot(t, v_0, label="v0 data")
+    #     plt.plot(t, sine(t, *popt0), label="v0 fit")
+    #     plt.plot(t, v_38, label="v38 data")
+    #     plt.plot(t, sine(t, *popt38), label="v38 fit")
+    #     plt.legend()
+    #     plt.show()
 
     w.append(popt0[1])
     dw.append(np.sqrt(pcov0[1, 1]))
@@ -110,17 +110,26 @@ d_ratio = ratio * np.sqrt((dvmax_38 / vmax_38) ** 2 + (dvmax_0 / vmax_0) ** 2)
 fig_dir = "figures/"
 
 plt.figure()
-plt.errorbar(w, ratio, yerr=d_ratio, fmt=".", label="Experimental")
-plt.title("Ratio of amplitudes")
-plt.xlabel(r"$\omega$ (s$^{-1}$)")
-plt.ylabel(r"$v_{38}/v_{0}$")
+plt.errorbar(w * 1e-3 / 2 / np.pi, ratio, yerr=d_ratio, fmt=".", label="Experimental")
+plt.xlabel(r"$f$ (kHz)")
+plt.ylabel(r"$V_{38}/V_{0}$")
 plt.legend()
 plt.savefig(fig_dir + "ratio_res.pdf")
 
 plt.figure()
-plt.errorbar(k, w, yerr=dw, fmt=".", label="Experimental")
+plt.errorbar(
+    k,
+    w / (2 * np.pi * 1000),
+    yerr=dw / (2 * np.pi * 1000),
+    fmt=".",
+    label="Experimental",
+)
 k_theo = np.linspace(0, np.pi, 1000)
-plt.plot(k_theo, w_c * np.abs(np.sin(k_theo * l_0 / 2)), label="Theoretical (calc)")
+plt.plot(
+    k_theo,
+    w_c * np.abs(np.sin(k_theo * l_0 / 2)) / (2 * np.pi * 1000),
+    label="Theoretical (calc)",
+)
 
 
 def dispersion_func(k, wc):
@@ -129,11 +138,15 @@ def dispersion_func(k, wc):
 
 popt_wc, _ = opt.curve_fit(dispersion_func, k, w, p0=[w_c])
 wc_fit = popt_wc[0]
-plt.plot(k_theo, dispersion_func(k_theo, wc_fit), "--", label="Theoretical (fit)")
+plt.plot(
+    k_theo,
+    dispersion_func(k_theo, wc_fit) / (2 * np.pi * 1000),
+    "--",
+    label="Theoretical (fit)",
+)
 
-plt.title("Dispersion relation")
 plt.xlabel(r"k (sections$^{-1}$)")
-plt.ylabel(r"$\omega$ (s$^{-1}$)")
+plt.ylabel(r"$f$ (kHz)")
 plt.legend()
 plt.savefig(fig_dir + "dispersion_res.pdf")
 
@@ -151,19 +164,21 @@ w_fit_new = dispersion_func(k_new, wc_fit)
 vg_fit = wc_fit * (l_0 / 2) * np.cos(k_new * l_0 / 2)
 
 plt.figure()
-plt.plot(w_new, vp, label="Phase velocity")
-plt.plot(w_new, vg, label="Group velocity")
-plt.plot(w_fit_new, vg_fit, "--", label="Group velocity (fit)")
-plt.xlabel(r"$\omega$ (s$^{-1}$)")
-plt.ylabel(r"Velocity (sections/s)")
+plt.plot(w_new / (2 * np.pi * 1000), vp / 1000, label="Phase velocity")
+plt.plot(w_new / (2 * np.pi * 1000), vg / 1000, label="Group velocity")
+plt.plot(
+    w_fit_new / (2 * np.pi * 1000), vg_fit / 1000, "--", label="Group velocity (fit)"
+)
+plt.xlabel(r"$f$ (kHz)")
+plt.ylabel(r"Velocity (sections/ms)")
 plt.legend()
 plt.savefig(fig_dir + "velocities_res.pdf")
 
 plt.figure()
-plt.errorbar(w, vmax_in, yerr=dvmax_in, fmt=".", label=r"$v_{in}$")
-plt.errorbar(w, vmax_0, yerr=dvmax_0, fmt=".", label=r"$v_{0}$")
-plt.errorbar(w, vmax_38, yerr=dvmax_38, fmt=".", label=r"$v_{38}$")
-plt.xlabel(r"$\omega$ (s$^{-1}$)")
+plt.errorbar(w * 1e-3 / 2 / np.pi, vmax_in, yerr=dvmax_in, fmt=".", label=r"$v_{in}$")
+plt.errorbar(w * 1e-3 / 2 / np.pi, vmax_0, yerr=dvmax_0, fmt=".", label=r"$v_{0}$")
+plt.errorbar(w * 1e-3 / 2 / np.pi, vmax_38, yerr=dvmax_38, fmt=".", label=r"$v_{38}$")
+plt.xlabel(r"$f$ (kHz)")
 plt.ylabel("Amplitude (V)")
 plt.legend()
 plt.savefig(fig_dir + "amplitudes_res.pdf")
