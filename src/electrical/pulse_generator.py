@@ -27,7 +27,7 @@ waveform_bytes = waveform_normalized.astype(np.float32).tobytes()
 try:
     # Initialize connection (replace with your oscilloscope's IP address or VISA resource string)
     instr = RsInstrument.RsInstrument(
-        "TCPIP::192.168.1.100::INSTR",  # ! Replace with actual oscilloscope ID
+        "TCPIP::xxxxxxxxxxx::SOCKET ",
         id_query=True,
         reset=False,
         options="SelectVisa='pyvisa-py'",
