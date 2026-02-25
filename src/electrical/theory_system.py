@@ -1,6 +1,14 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import solve_ivp
+import os
+import sys
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+
+import src.utils.landaubeta as lb
+
+lb.use_latex_fonts()
 
 # 1. Circuit Parameters
 L = 330e-6
