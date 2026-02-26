@@ -12,7 +12,7 @@ import src.utils.landaubeta as lb
 lb.use_latex_fonts()
 
 # 1. Load Data
-i = 3
+i = 4
 input_path = f"data/electrical/theory_system_random/matched/output_{i}.csv"
 try:
     df = pd.read_csv(input_path)
@@ -47,7 +47,7 @@ plt.legend()
 plt.tight_layout()
 plt.savefig("figures/theory_system_random.pdf")
 
-plot_amps = [38, 39]
+plot_amps = [0, 1]
 plt.figure(figsize=(10, 6))
 for j in plot_amps:
     plt.plot(

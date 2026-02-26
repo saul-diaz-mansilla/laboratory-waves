@@ -13,10 +13,10 @@ num_points = 10000  # Resolution: how many points make up one full cycle
 duration = 1.0 / awg_frequency  # Total duration of the waveform
 t = np.linspace(0, duration, num_points, endpoint=False)
 
-frequencies = np.linspace(20000, 140000, 10)
+frequencies = np.linspace(20000, 140000, 30)
 print(frequencies)
 t0 = duration / 2  # Time center of the Gaussian pulse
-sigma = 0.0001  # Width of the envelope
+sigma = 0.00002  # Width of the envelope
 amplitude = vpp / 2.0
 
 plt.figure(figsize=(10, 6))
@@ -33,7 +33,7 @@ for i in range(len(frequencies)):
 
     # 2. Export to CSV for USB Upload
     # Most R&S instruments prefer a simple Time(s), Voltage(V) format.
-    file_name = f"data/electrical/gaussian/GEN_{i + 1}.csv"
+    file_name = f"data/electrical/gaussian_2/GEN_{i + 1}.csv"
 
     try:
         # Create a DataFrame for clean formatting
