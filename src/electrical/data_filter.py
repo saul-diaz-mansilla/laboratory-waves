@@ -2,8 +2,8 @@ import numpy as np
 import pandas as pd
 import scipy.signal as signal
 
-for i in range(30):
-    file_path = "data/electrical/gaussian_2/" + f"AMPPUL{i + 1:02d}.CSV"
+for i in range(10):
+    file_path = "data/electrical/pulses/" + f"AMPPUL{i + 1:02d}.CSV"
     data = pd.read_csv(file_path)
     t = data.iloc[:, 0].to_numpy()
     v_0 = data.iloc[:, 1].to_numpy()
@@ -16,10 +16,10 @@ for i in range(30):
     v_0 = signal.sosfiltfilt(sos, v_0)
     v_38 = signal.sosfiltfilt(sos, v_38)
 
-    v_0 = v_0 - np.mean(v_0)
-    v_38 = v_38 - np.mean(v_38)
+    # v_0 = v_0 - np.mean(v_0)
+    # v_38 = v_38 - np.mean(v_38)
 
-    output_path = "data/electrical/gaussian_2/" + f"FILTERED{i + 1:02d}.CSV"
+    output_path = "data/electrical/pulses/" + f"FILTERED{i + 1:02d}.CSV"
     df_out = pd.DataFrame(
         np.column_stack([t, v_0, v_38, v_in]), columns=data.columns[:4]
     )
