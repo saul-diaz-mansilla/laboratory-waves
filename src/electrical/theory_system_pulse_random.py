@@ -14,14 +14,13 @@ dC = 0.1 * C_0
 C_end = 7.5e-9
 dC_end = dC / 2
 R_in = 150
-V_in = 2.5
+R_out = 130
 N = 41  # Nodes 0 to 40
 
 # Pulse Parameters
 duration = 1e-3  # Total duration of the waveform
 pulse_width = 2e-5
 pulse_height = 5.0
-R_out = 130
 
 # 2. Build the Matrices (Randomized)
 # Capacitance Vector

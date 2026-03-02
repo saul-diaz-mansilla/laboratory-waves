@@ -19,6 +19,9 @@ for i in range(10):
     # v_0 = v_0 - np.mean(v_0)
     # v_38 = v_38 - np.mean(v_38)
 
+    v_0 = v_0 - np.mean(v_0[len(v_0) // 2 :])
+    v_38 = v_38 - np.mean(v_38[len(v_38) // 2 :])
+
     output_path = "data/electrical/pulses/" + f"FILTERED{i + 1:02d}.CSV"
     df_out = pd.DataFrame(
         np.column_stack([t, v_0, v_38, v_in]), columns=data.columns[:4]

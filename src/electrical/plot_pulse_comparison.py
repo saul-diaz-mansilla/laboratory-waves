@@ -10,6 +10,11 @@ import src.utils.landaubeta as lb
 
 lb.use_latex_fonts()
 
+# Pulse Parameters
+duration = 1e-3  # Total duration of the waveform
+pulse_width = 2e-5
+pulse_height = 5.0
+
 # 1. Load Simulation Data
 output_dir = "data/electrical/pulses"
 existing_indices = []
@@ -84,22 +89,53 @@ if os.path.exists(exp_file):
 
     plt.figure()
     plt.plot(t_exp, v0_exp, label="Experimental $V_0$")
-    plt.plot(t_exp, v38_exp, label="Experimental $V_{38}$")
+    # plt.plot(t_exp, v38_exp, label="Experimental $V_{38}$")
+    plt.plot(t_sim, v0_sim, label="Simulation $V_0$")
     plt.xlabel("Time (s)")
     plt.ylabel("Voltage (V)")
     plt.legend()
 
+    mask_pulse = t_exp < pulse_width + 1e-7
+    v_exp_height = np.mean(v0_exp[mask_pulse])
+
+    z_0_sim = np.abs(z_0) / len(v0_sim)
+    z_0_exp = np.abs(z0_exp[mask_exp]) / len(v0_exp)
+    sinc_exp = (
+        np.abs(np.sinc(y0_exp[mask_exp] * pulse_width))
+        * pulse_width
+        * np.max(v0_exp)
+        / duration
+    )  # // * np.max(z_0_exp)
+
     plt.figure()
-    plt.plot(y_0 / 1e3, np.abs(z_0) / np.max(np.abs(z_0)), label=r"Theoretical $V_0$")
+    plt.plot(y_0 / 1e3, z_0_sim, label=r"Theoretical $V_0$")
     plt.plot(
         y0_exp[mask_exp] / 1e3,
-        np.abs(z0_exp[mask_exp]) / np.max(np.abs(z0_exp[mask_exp])),
+        z_0_exp,
         label=r"Experimental $V_0$",
+    )
+    plt.plot(
+        y0_exp[mask_exp] / 1e3,
+        sinc_exp,
+        "--",
+        label="Sinc (exp amplitude)",
+        alpha=0.7,
     )
     plt.xlabel("Frequency (kHz)")
     plt.ylabel("Amplitude")
-    plt.xlim(0, 140)
+    plt.xlim(0, 200)
     plt.legend()
+    plt.savefig("figures/pulse_comparison.pdf")
+
+    deviation = z_0_exp - sinc_exp
+    plt.figure()
+    plt.plot(y0_exp[mask_exp] / 1e3, deviation, label="Deviation")
+    plt.xlabel("Frequency (kHz)")
+    plt.ylabel("Deviation")
+    plt.title("Deviation between Theoretical $V_0$ and Sinc Function")
+    plt.xlim(0, 200)
+    plt.legend()
+    plt.savefig("figures/pulse_deviation.pdf")
     plt.show()
 else:
     print(f"Experimental data file not found: {exp_file}")
