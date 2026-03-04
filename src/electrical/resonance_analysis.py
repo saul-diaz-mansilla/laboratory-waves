@@ -81,9 +81,10 @@ for i, freq in enumerate(exp_freqs):
         linestyle="--",
         label="Pulse Peaks" if i == 0 else None,
     )
-
-plt.ylabel("File Index")
 plt.xlabel("Frequency (kHz)")
+plt.ylabel("File Index")
+plt.xlim(0, 160)
 plt.legend()
 plt.grid(True)
+plt.savefig("figures/resonance_peaks.pdf")
 plt.show()

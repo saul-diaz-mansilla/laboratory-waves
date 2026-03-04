@@ -84,6 +84,7 @@ if os.path.exists(exp_file):
 
     dt_exp = t_exp[1] - t_exp[0]
     z0_exp = fft.fft(v0_exp)
+    z38_exp = fft.fft(v38_exp)
     y0_exp = fft.fftfreq(len(v0_exp), d=dt_exp)
     mask_exp = y0_exp > 0
 
@@ -98,13 +99,12 @@ if os.path.exists(exp_file):
     mask_pulse = t_exp < pulse_width + 1e-7
     v_exp_height = np.mean(v0_exp[mask_pulse])
 
-    z_0_sim = np.abs(z_0) / len(v0_sim)
-    z_0_exp = np.abs(z0_exp[mask_exp]) / len(v0_exp)
+    z_0_sim = np.abs(z_0) * dt
+    z_38_sim = np.abs(z_38) * dt
+    z_0_exp = np.abs(z0_exp[mask_exp]) * dt_exp
+    z_38_exp = np.abs(z38_exp[mask_exp]) * dt_exp
     sinc_exp = (
-        np.abs(np.sinc(y0_exp[mask_exp] * pulse_width))
-        * pulse_width
-        * np.max(v0_exp)
-        / duration
+        np.abs(np.sinc(y0_exp[mask_exp] * pulse_width)) * pulse_width * np.max(v0_exp)
     )  # // * np.max(z_0_exp)
 
     plt.figure()
@@ -123,7 +123,7 @@ if os.path.exists(exp_file):
     )
     plt.xlabel("Frequency (kHz)")
     plt.ylabel("Amplitude")
-    plt.xlim(0, 200)
+    plt.xlim(0, 160)
     plt.legend()
     plt.savefig("figures/pulse_comparison.pdf")
 
@@ -132,10 +132,30 @@ if os.path.exists(exp_file):
     plt.plot(y0_exp[mask_exp] / 1e3, deviation, label="Deviation")
     plt.xlabel("Frequency (kHz)")
     plt.ylabel("Deviation")
-    plt.title("Deviation between Theoretical $V_0$ and Sinc Function")
-    plt.xlim(0, 200)
+    plt.title("Deviation between Experimental $V_0$ and Sinc Function")
+    plt.xlim(0, 160)
     plt.legend()
     plt.savefig("figures/pulse_deviation.pdf")
+
+    # Compute the Transfer Function magnitude
+    H_sim = np.abs(z_38_sim) / np.abs(z_0_sim)
+
+    # To avoid division by zero at the exact sinc nodes, add a tiny epsilon or filter the mask
+    epsilon = 1e-10
+    H_exp = z_38_exp / (z_0_exp + epsilon)
+
+    plt.figure()
+    plt.plot(y_0 / 1e3, H_sim, label="Simulation Transfer Function $|H(f)|$")
+    plt.plot(
+        y0_exp[mask_exp] / 1e3, H_exp, label="Experimental Transfer Function $|H(f)|$"
+    )
+    plt.xlabel("Frequency (kHz)")
+    plt.ylabel("Magnitude $|V_{38}(f) / V_0(f)|$")
+    plt.title("System Resonances (Transfer Function)")
+    plt.xlim(0, 160)
+    plt.ylim(0, 10)
+    plt.legend()
+    plt.savefig("figures/transfer_function.pdf")
     plt.show()
 else:
     print(f"Experimental data file not found: {exp_file}")
