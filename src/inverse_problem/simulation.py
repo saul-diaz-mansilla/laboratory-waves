@@ -5,7 +5,7 @@ import os
 import scipy.fft as fft
 import matplotlib.pyplot as plt
 
-simulation_on = True
+simulation_on = False
 
 if simulation_on:
     simulation_number = 10000
@@ -119,7 +119,12 @@ for _ in range(simulation_number):
 
     # 4. Integrate
     sol = solve_ivp(
-        odefunc, (0, duration), Y0, method="RK45", max_step=tr, t_eval=t_eval_points
+        odefunc,
+        (0, duration),
+        Y0,
+        method="RK45",
+        max_step=tr / 10,
+        t_eval=t_eval_points,
     )
 
     # 5. Extract Voltages and Add Noise
@@ -141,14 +146,14 @@ for _ in range(simulation_number):
     for node in target_nodes:
         z_node = fft.fft(V_noisy[node, :])
         # Compute complex transfer function
-        H = z_node[mask] / z_0[mask]
+        H = z_node[mask] / (z_0[mask] + 1e-10)
 
         # Store Magnitude and Phase (Standard practice for ML inputs)
         freq_data[f"H_Mag_{node}"] = np.abs(H)
         freq_data[f"H_Phase_{node}"] = np.angle(H)
 
     # 7. Exporting Data via Parquet
-    output_dir = "data/inverse_problem"
+    output_dir = "data/temp"
     os.makedirs(output_dir, exist_ok=True)
 
     existing_indices = []
@@ -191,7 +196,14 @@ for _ in range(simulation_number):
         y0_exp = fft.fftfreq(len(v0_exp), d=dt_exp)
         mask_exp = y0_exp > 0
 
-        H_exp = np.abs(z40_exp[mask_exp]) / np.abs(z0_exp[mask_exp])
+        H_exp = np.abs(z40_exp[mask_exp]) / (np.abs(z0_exp[mask_exp]) + 1e-10)
+
+        plt.figure()
+        plt.plot(t_exp, v40_exp, label="Experimental $V_0$")
+        plt.plot(t_eval_points, V_clean[-1, :], label="Simulation $V_0$")
+        plt.xlabel("Time (s)")
+        plt.ylabel("Voltage (V)")
+        plt.legend()
 
         plt.figure()
         plt.plot(

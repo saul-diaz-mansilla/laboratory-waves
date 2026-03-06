@@ -1,2 +1,4 @@
 # Ignore all parquet files
 *.parquet
+__pycache__/
+.venv/
