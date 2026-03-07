@@ -11,7 +11,7 @@ from src.inverse_problem.model import TransferFunctionCNN
 from src.inverse_problem.dataset import TransmissionLineDataset
 
 # --- 1. Initialization & Data Splitting ---
-data_directory = "data/inverse_problem"
+data_directory = "data/inverse_problem/simulations_pulse"
 total_simulations = 10000
 batch_size = 64
 num_epochs = 50  # Set the number of epochs here

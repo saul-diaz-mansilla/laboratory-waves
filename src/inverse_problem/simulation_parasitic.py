@@ -5,8 +5,9 @@ import os
 import scipy.fft as fft
 import matplotlib.pyplot as plt
 import time
+from scipy.interpolate import interp1d
 
-simulation_on = False
+simulation_on = True
 
 time_start = time.time()
 
@@ -34,14 +35,36 @@ def H_func(V_in, V_out, t, z_in=None):
     epsilon = np.max(P_in) * 1e-3
 
     # Apply Tikhonov Regularized Division
-    H = (z40 * np.conj(z0)) / (P_in + epsilon)
+    H_raw = (z40 * np.conj(z0)) / (P_in + epsilon)
     # Define the frequencies to drop (in Hz)
-    to_drop = np.arange(1, 51) * 10000
+    to_drop = np.arange(1, 51) * 50000
 
-    # Create a mask of elements to KEEP
-    # We use np.isclose to handle potential float precision issues
-    mask_drop = ~np.any([np.isclose(y0, f, atol=667) for f in to_drop], axis=0)
-    return H[mask_drop], y0[mask_drop]
+    # mask_bad represents the spectral nulls where the data is garbage
+    mask_bad = np.any([np.isclose(y0, f, atol=600) for f in to_drop], axis=0)
+
+    # mask_good represents the clean, reliable data
+    mask_good = ~mask_bad
+
+    # We interpolate the Real and Imaginary parts separately
+    f_interp_real = interp1d(
+        y0[mask_good], np.real(H_raw)[mask_good], kind="cubic", fill_value="extrapolate"
+    )
+
+    f_interp_imag = interp1d(
+        y0[mask_good], np.imag(H_raw)[mask_good], kind="cubic", fill_value="extrapolate"
+    )
+
+    # 4. Construct the Final, Equally Spaced Array
+    H_clean = np.empty_like(H_raw)
+
+    # Keep the good data exactly as it is
+    H_clean[mask_good] = H_raw[mask_good]
+
+    # Overwrite the bad data with the smoothly interpolated values
+    H_clean[mask_bad] = f_interp_real(y0[mask_bad]) + 1j * f_interp_imag(y0[mask_bad])
+
+    # Return the clean, equally spaced complex transfer function and frequency axis
+    return H_clean, y0
 
 
 if simulation_on:
@@ -64,7 +87,7 @@ for _ in range(simulation_number):
 
     # # Parasitic Guesses
     R_L_0 = 0.730  # Nominal Inductor DCR (Ohms)
-    dR_L = 0.01 * R_L_0
+    dR_L = 0.1 * R_L_0
     # G_C_0 = 0e-4  # Nominal Capacitor Shunt Conductance (1/Ohms)
     # dG_C = 0.0 * G_C_0
     noise_std = 1e-3  # Gaussian noise standard deviation (Volts)
@@ -144,8 +167,6 @@ for _ in range(simulation_number):
     sol = solve_ivp(
         odefunc, (0, duration), Y0, method="RK45", max_step=tr, t_eval=t_eval_points
     )
-    print(f"Simulation Complete at time: {time.time() - time_start:.2f} seconds")
-
     # 5. Extract Voltages and Add Noise
     # We only care about voltages (first N elements) for the transfer function
     V_clean = sol.y[:N, :]
@@ -167,11 +188,8 @@ for _ in range(simulation_number):
         freq_data[f"H_Mag_{node}"] = np.abs(H)
         freq_data[f"H_Phase_{node}"] = np.angle(H)
 
-    print(
-        f"Transfer Functions Calculated at time: {time.time() - time_start:.2f} seconds"
-    )
     # 7. Exporting Data via Parquet
-    output_dir = "data/temp"
+    output_dir = "data/inverse_problem/simulations_pulse"
     os.makedirs(output_dir, exist_ok=True)
 
     existing_indices = []
@@ -199,11 +217,12 @@ for _ in range(simulation_number):
         os.path.join(output_dir, f"targets_{next_idx}.parquet"), engine="pyarrow"
     )
 
-    print(f"Simulation {next_idx} completed and saved using Parquet.")
-    print(f"Total time taken: {time.time() - time_start:.2f} seconds")
+    print(
+        f"Simulation {next_idx} completed. Time elapsed: {time.time() - time_start:.2f} s"
+    )
 
     if not simulation_on:
-        exp_file = "data/electrical/pulses_2/FILTERED01.CSV"
+        exp_file = "data/electrical/pulses/FILTERED01.CSV"
         data_exp = pd.read_csv(exp_file)
         t_exp = data_exp.iloc[:, 0].to_numpy()
         v0_exp = data_exp.iloc[:, 1].to_numpy()
