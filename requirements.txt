@@ -1,4 +1,5 @@
 matplotlib==3.10.8
+numba
 numpy==2.2.6
 pandas==2.3.3
 RsInstrument==1.124.0

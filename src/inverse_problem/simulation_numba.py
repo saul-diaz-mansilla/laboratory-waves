@@ -1,17 +1,101 @@
 import numpy as np
-from scipy.integrate import solve_ivp
 import pandas as pd
 import os
 import scipy.fft as fft
 import matplotlib.pyplot as plt
 import time
+from numba import njit
 
 simulation_on = False
+
+if simulation_on:
+    simulation_number = 10000
+else:
+    simulation_number = 1
+
+# Circuit Parameters
+L_0 = 330e-6
+dL = 0.2 * L_0
+C_0 = 15e-9
+dC = 0.1 * C_0
+C_end = 7.5e-9
+dC_end = dC / 2
+R_in_0 = 150
+
+N = 41
+N_ind = N - 1
+
+# Deviations from ideal behavior
+# Parasitic resistances in L
+R_L_0 = 0.730
+dR_L = 0.1 * R_L_0
+
+# Shunt conductance in capacitors
+G_C_0 = 1e-4  # 10kOhm equivalent parallel resistance
+dG_C = 0.1 * G_C_0
+
+# Skin effect coefficient
+k_skin_0 = 0.008
+
+# Oscilloscope AWG Parameters for input function
+awg_frequency = 500.0
+vpp = 5.0
+num_points = 10000
+
+# Gaussian wavepacket parameters
+duration = 1.0 / awg_frequency
+frequencies = np.linspace(20000, 140000, 30)
+t0 = duration / 2
+sigma = 0.00002
+amplitude = vpp / 2.0
+
+# RK4 parameters
+t_eval_points = np.linspace(0, duration, num_points, endpoint=False)
+dt = t_eval_points[1] - t_eval_points[0]
 
 time_start = time.time()
 
 
-def H_func_global(V_in_data, V_out_data, t_array, threshold=0.2):
+@njit
+def compute_deriv(t, Y, A, B, amplitude, t0, sigma, f_c):
+    V_in_val = (
+        amplitude
+        * np.exp(-((t - t0) ** 2) / (2 * sigma**2))
+        * np.cos(2 * np.pi * f_c * t)
+    )
+    return A @ Y + B * V_in_val
+
+
+@njit
+def rk4_solve(t_eval, Y0, A, B, amplitude, t0, sigma, f_c):
+    n_points = len(t_eval)
+    n_states = len(Y0)
+    Y_out = np.zeros((n_states, n_points))
+
+    Y_curr = Y0.copy()
+    Y_out[:, 0] = Y_curr
+
+    dt = t_eval[1] - t_eval[0]
+
+    for i in range(1, n_points):
+        t = t_eval[i - 1]
+
+        k1 = compute_deriv(t, Y_curr, A, B, amplitude, t0, sigma, f_c)
+        k2 = compute_deriv(
+            t + dt / 2, Y_curr + dt / 2 * k1, A, B, amplitude, t0, sigma, f_c
+        )
+        k3 = compute_deriv(
+            t + dt / 2, Y_curr + dt / 2 * k2, A, B, amplitude, t0, sigma, f_c
+        )
+        k4 = compute_deriv(t + dt, Y_curr + dt * k3, A, B, amplitude, t0, sigma, f_c)
+
+        Y_curr = Y_curr + (dt / 6) * (k1 + 2 * k2 + 2 * k3 + k4)
+        Y_out[:, i] = Y_curr
+
+    return Y_out
+
+
+def H_func_global(V_in_data, V_out_data, t_array, freqs, t_std, threshold=0.3):
     """
     Computes a global transfer function using Cross-Spectral Density,
     masking out the noisy tails of the Gaussian wavepackets.
@@ -31,11 +115,13 @@ def H_func_global(V_in_data, V_out_data, t_array, threshold=0.2):
 
     S_xx = np.zeros(len(y0))
     S_xy = np.zeros(len(y0), dtype=complex)
+    # Calculate the frequency standard deviation theoretically
+    f_std = 1.0 / (2 * np.pi * t_std) / 2
 
     # Track which frequency bins received valid data to avoid zero-division later
     coverage_mask = np.zeros(len(y0), dtype=bool)
 
-    for v_in, v_out in zip(V_in_data, V_out_data):
+    for v_in, v_out, f_mean in zip(V_in_data, V_out_data, freqs):
         z_in = fft.fft(v_in)[mask_pos]
         z_out = fft.fft(v_out)[mask_pos]
 
@@ -43,8 +129,9 @@ def H_func_global(V_in_data, V_out_data, t_array, threshold=0.2):
         P_in = np.abs(z_in) ** 2
 
         # Identify the high-energy region of this specific wavepacket
-        peak_power = np.max(P_in)
-        valid_bins = P_in > (threshold * peak_power)
+        # peak_power = np.max(P_in)
+        # valid_bins = P_in > (threshold * peak_power)
+        valid_bins = (y0 >= f_mean - f_std) & (y0 <= f_mean + f_std)
 
         # Accumulate only the significant bins (cutting off the noisy tails)
         S_xx[valid_bins] += P_in[valid_bins]
@@ -59,52 +146,20 @@ def H_func_global(V_in_data, V_out_data, t_array, threshold=0.2):
     # We use a tiny epsilon fallback just in case, but the coverage_mask
     # handles the heavy lifting of preventing zero-division
     # epsilon = 1e-15
-    H_global[coverage_mask] = S_xy[coverage_mask] / (
-        S_xx[coverage_mask] + np.max(S_xx[coverage_mask]) * 0.01
-    )
+    H_global[coverage_mask] = S_xy[coverage_mask] / (S_xx[coverage_mask])
 
     return H_global, y0
 
 
-if simulation_on:
-    simulation_number = 10000
-else:
-    simulation_number = 1
-
-# --- 1. Oscilloscope AWG Parameters ---
-awg_frequency = 500.0
-vpp = 5.0
-num_points = 10000
-
-duration = 1.0 / awg_frequency
-t_eval_points = np.linspace(0, duration, num_points, endpoint=False)
-dt = t_eval_points[1] - t_eval_points[0]
-
-frequencies = np.linspace(20000, 140000, 30)
-t0 = duration / 2
-sigma = 0.00002
-amplitude = vpp / 2.0
-
-
 for _ in range(simulation_number):
-    # 1. Circuit Parameters
-    L_0 = 330e-6
-    dL = 0.2 * L_0
-    C_0 = 15e-9
-    dC = 0.1 * C_0
-    C_end = 7.5e-9
-    dC_end = dC / 2
-    R_in = 150
-    # R_out is now calculated dynamically inside the loop
+    # Domain Randomization Parameters
+    k_skin = np.random.normal(k_skin_0, 0.1 * k_skin_0)  # ~10% variation
+    R_in = np.random.normal(R_in_0, R_in_0 * 0.05)  # 5% tolerance on input resistor
+    R_out_mult = np.random.normal(1.0, 0.05)  # 5% tolerance on output resistors
+    noise_std = np.random.uniform(0.5e-3, 2.0e-3)  # Varying noise floor
+    global_temp_drift = np.random.uniform(0.98, 1.02)  # +/- 2% global capacitance drift
 
-    N = 41
-    N_ind = N - 1
-
-    R_L_0 = 0.730
-    dR_L = 0.1 * R_L_0
-    noise_std = 1e-3
-
-    # 2. Build the Matrices (Randomized)
+    # Build the Matrices (randomized)
     C = np.concatenate(
         (
             [np.random.normal(C_end, dC_end)],
@@ -112,20 +167,22 @@ for _ in range(simulation_number):
             [np.random.normal(C_end, dC_end)],
         )
     )
+    C *= global_temp_drift
+    G_C = np.random.normal(G_C_0, dG_C, N)
+
     L = np.random.normal(L_0, dL, N - 1)
     R_L = np.random.normal(R_L_0, dR_L, N - 1)
 
     # Calculate theoretical cutoff angular frequency based on nominal values
     omega_c = 2.0 / np.sqrt(L_0 * C_0)
 
-    # 3. Build First-Order V-I State-Space Matrices
+    # Build First-Order V-I State-Space Matrices
     total_states = 2 * N - 1
     A = np.zeros((total_states, total_states))
     B = np.zeros(total_states)
 
     B[0] = 1 / (R_in * C[0])
-    A[0, 0] = -1 / (R_in * C[0])
-    # A[N - 1, N - 1] is reserved for R_out and will be updated dynamically
+    A[0, 0] = -1 / (R_in * C[0]) - G_C[0] / C[0]
     A[N - 1, total_states - 1] = 1 / C[-1]
 
     for i in range(N - 1):
@@ -134,11 +191,12 @@ for _ in range(simulation_number):
         A[N + i, i] = 1 / L[i]
         A[N + i, i + 1] = -1 / L[i]
         A[N + i, N + i] = -R_L[i] / L[i]
+        A[i + 1, i + 1] = -G_C[i + 1] / C[i + 1]
 
     V_in_all_runs = []
     V_out_nodes_all_runs = {node: [] for node in np.arange(1, 11) * 4}
 
-    # 4. Integrate 30 times (Dynamic Impedance Matching)
+    # Integrate 30 times (Dynamic Impedance Matching)
     for f_c in frequencies:
         omega = 2.0 * np.pi * f_c
 
@@ -149,28 +207,21 @@ for _ in range(simulation_number):
         else:
             R_out = np.sqrt(L_0 / C_0) / np.sqrt(1 - (omega / omega_c) ** 2)
 
-        # Update the load boundary condition in the A matrix for this specific frequency
-        A[N - 1, N - 1] = -1 / (R_out * C[-1])
+        R_out *= R_out_mult
 
-        def odefunc(t, Y):
-            V_in_val = (
-                amplitude
-                * np.exp(-((t - t0) ** 2) / (2 * sigma**2))
-                * np.cos(2 * np.pi * f_c * t)
-            )
-            return A @ Y + B * V_in_val
+        # Update the load boundary condition in the A matrix for this specific frequency
+        A[N - 1, N - 1] = -G_C[-1] / C[-1] - 1 / (R_out * C[-1])
+
+        # --- Update Inductor AC Losses ---
+        R_L_AC = R_L * (1 + k_skin * np.sqrt(f_c))
+        for i in range(N - 1):
+            A[N + i, N + i] = -R_L_AC[i] / L[i]
 
         Y0 = np.zeros(total_states)
-        sol = solve_ivp(
-            odefunc,
-            (0, duration),
-            Y0,
-            method="RK45",
-            max_step=1e-7,
-            t_eval=t_eval_points,
-        )
 
-        V_clean = sol.y[:N, :]
+        Y_all = rk4_solve(t_eval_points, Y0, A, B, amplitude, t0, sigma, f_c)
+        V_clean = Y_all[:N, :]
+
         V_noisy = V_clean + np.random.normal(0, noise_std, V_clean.shape)
 
         V_in_all_runs.append(V_noisy[0, :])
@@ -184,7 +235,7 @@ for _ in range(simulation_number):
 
     for node in target_nodes:
         H, freqs_global = H_func_global(
-            V_in_all_runs, V_out_nodes_all_runs[node], t_eval_points
+            V_in_all_runs, V_out_nodes_all_runs[node], t_eval_points, frequencies, sigma
         )
 
         if freq_data is None:
@@ -209,9 +260,17 @@ for _ in range(simulation_number):
         os.path.join(output_dir, f"freq_data_{next_idx}.parquet"), engine="pyarrow"
     )
 
+    # Save targets (L, C, and new ML parameters padded/broadcasted to length N)
     target_data = {
         "C_norm": C / C_0,
         "L_norm": np.pad(L / L_0, (0, 1), constant_values=0),
+        "R_L_norm": np.pad(R_L / R_L_0, (0, 1), constant_values=0),
+        "k_skin_norm": np.full(N, k_skin / k_skin_0),
+        "R_in_norm": np.full(N, R_in / R_in_0),
+        "R_out_mult": np.full(N, R_out_mult),
+        "noise_std_mV": np.full(N, noise_std / 1e-3),
+        "global_temp_drift": np.full(N, global_temp_drift),
+        "G_C_norm": np.pad(G_C / G_C_0, (0, 0), constant_values=0),
     }
     df_targets = pd.DataFrame(target_data)
     df_targets.to_parquet(
@@ -228,6 +287,8 @@ for _ in range(simulation_number):
         exp_v0_all = []
         exp_v40_all = []
         t_exp_common = None
+        frequencies = np.linspace(20000, 140000, 30)
+        sigma = 0.00002
 
         for i in range(1, 31):
             # Attempt to read both non-padded and zero-padded filenames to be safe
@@ -253,7 +314,9 @@ for _ in range(simulation_number):
 
         if len(exp_v0_all) > 0:
             # Extract global H from the full list of 30 experimental arrays
-            H_exp, y0_exp = H_func_global(exp_v0_all, exp_v40_all, t_exp_common)
+            H_exp, y0_exp = H_func_global(
+                exp_v0_all, exp_v40_all, t_exp_common, frequencies, sigma
+            )
 
             plt.figure()
             plt.plot(

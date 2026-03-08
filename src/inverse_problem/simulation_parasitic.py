@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import time
 from scipy.interpolate import interp1d
 
-simulation_on = True
+simulation_on = False
 
 time_start = time.time()
 
@@ -189,7 +189,7 @@ for _ in range(simulation_number):
         freq_data[f"H_Phase_{node}"] = np.angle(H)
 
     # 7. Exporting Data via Parquet
-    output_dir = "data/inverse_problem/simulations_pulse"
+    output_dir = "data/temp"
     os.makedirs(output_dir, exist_ok=True)
 
     existing_indices = []

@@ -22,7 +22,7 @@ f_c = (2 / np.sqrt(L * C)) / (2 * np.pi)
 # 3. Setup the Integration
 # 30 points to keep computation time reasonable
 frequencies = np.linspace(20, f_c, 30)
-ratio_V38_V0 = []
+ratio_V40_V0 = []
 
 print("Starting numerical integration. This will take a moment...")
 
@@ -78,8 +78,8 @@ for idx, f in enumerate(frequencies):
     # // Y0 = np.zeros(2 * N, dtype=complex)
     Y0 = np.zeros(2 * N)
 
-    # Integrate for 1 millisecond (enough time for transients to decay) + 10 periods
-    t_span = (0, 1e-3 + 10 / f)
+    # Integrate for 1 millisecond (enough time for transients to decay) + 2 periods
+    t_span = (0, 1e-3 + 2 / f)
 
     # We restrict the max_step to ensure the solver catches the fast oscillations
     sol = solve_ivp(odefunc, t_span, Y0, method="RK45", max_step=1 / (20 * f))
@@ -89,16 +89,17 @@ for idx, f in enumerate(frequencies):
     mask = sol.t >= t_steady_start
 
     V0_amp = np.max(np.abs(sol.y[0][mask]))
-    V38_amp = np.max(np.abs(sol.y[38][mask]))
+    V40_amp = np.max(np.abs(sol.y[40][mask]))
 
-    ratio = V38_amp / V0_amp if V0_amp != 0 else 0
-    ratio_V38_V0.append(ratio)
+    ratio = V40_amp / V0_amp if V0_amp != 0 else 0
+    ratio_V40_V0.append(ratio)
+
     print(f"Computed {idx + 1}/30: f = {f / 1000:.1f} kHz")
 
     # if idx == 15:
     #     plt.figure(figsize=(10, 6))
     #     plt.plot(sol.t * 1000, sol.y[0], label="$V_0$")
-    #     plt.plot(sol.t * 1000, sol.y[38], label="$V_{38}$")
+    #     plt.plot(sol.t * 1000, sol.y[40], label="$V_{40}$")
     #     plt.title(f"Time Domain Response at f = {f / 1000:.1f} kHz")
     #     plt.xlabel("Time (ms)")
     #     plt.ylabel("Voltage (V)")
@@ -109,7 +110,7 @@ for idx, f in enumerate(frequencies):
 
 # 4. Plotting
 plt.figure(figsize=(10, 6))
-plt.plot(frequencies / 1000, ratio_V38_V0, "b-o", linewidth=2, label="$|V_{38} / V_0|$")
+plt.plot(frequencies / 1000, ratio_V40_V0, "b-o", linewidth=2, label="$|V_{40} / V_0|$")
 plt.axvline(
     x=f_c / 1000,
     color="r",
@@ -121,7 +122,7 @@ plt.title(
     "Steady-State Amplitude Ratio via Time-Domain Numerical Integration", fontsize=14
 )
 plt.xlabel("Frequency (kHz)", fontsize=12)
-plt.ylabel("Amplitude Ratio $|V_{38} / V_0|$", fontsize=12)
+plt.ylabel("Amplitude Ratio $|V_{40} / V_0|$", fontsize=12)
 plt.grid(True, linestyle="--", alpha=0.7)
 plt.legend()
 plt.tight_layout()

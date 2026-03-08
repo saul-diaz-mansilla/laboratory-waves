@@ -12,7 +12,7 @@ import src.utils.landaubeta as lb
 lb.use_latex_fonts()
 
 # 1. Load Data
-i = 4
+i = 3
 input_path = f"data/electrical/theory_system_random/matched/output_{i}.csv"
 try:
     df = pd.read_csv(input_path)
