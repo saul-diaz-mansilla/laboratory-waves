@@ -127,19 +127,19 @@ for idx, f in enumerate(frequencies):
 
     print(f"Computed {idx + 1}/{len(frequencies)}: f = {f / 1000:.1f} kHz")
     # Plot the real part of the steady-state signals for the first frequency
-    if idx == 0:
-        plt.figure(figsize=(10, 6))
-        plt.plot(t_eval[mask], V0_steady_ac.real, label=r"Real($V_0$)")
-        plt.plot(t_eval[mask], V40_steady_ac.real, label=r"Real($V_{40}$)")
-        plt.title(
-            f"Real Part of Steady-State Voltages at f = {f / 1000:.1f} kHz",
-            fontsize=14,
-        )
-        plt.xlabel("Time (s)", fontsize=12)
-        plt.ylabel("Voltage (V)", fontsize=12)
-        plt.legend(loc="upper right")
-        plt.grid(True)
-        plt.show()
+    # if idx == 0:
+    #     plt.figure(figsize=(10, 6))
+    #     plt.plot(t_eval[mask], V0_steady_ac.real, label=r"Real($V_0$)")
+    #     plt.plot(t_eval[mask], V40_steady_ac.real, label=r"Real($V_{40}$)")
+    #     plt.title(
+    #         f"Real Part of Steady-State Voltages at f = {f / 1000:.1f} kHz",
+    #         fontsize=14,
+    #     )
+    #     plt.xlabel("Time (s)", fontsize=12)
+    #     plt.ylabel("Voltage (V)", fontsize=12)
+    #     plt.legend(loc="upper right")
+    #     plt.grid(True)
+    #     plt.show()
 # 4. Plotting
 plt.figure(figsize=(10, 6))
 plt.plot(frequencies / 1000, ratio_V40_V0, "b-", linewidth=2, label="$|V_{40} / V_0|$")
@@ -160,7 +160,7 @@ phases_unwrapped = np.unwrap(phases)
 k = phases_unwrapped / (N - 1)
 k_th = np.linspace(0, np.max(k), 500)
 
-plt.figure(figsize=(10, 6))
+plt.figure()
 plt.plot(
     k_th,
     f_c * np.sin(k_th / 2) / 1e3,
@@ -168,12 +168,15 @@ plt.plot(
     linewidth=2,
     label="Infinite line",
 )
-plt.plot(k, frequencies / 1000, "b--", linewidth=2, label="Finite line")
-plt.title("Dispersion Relation", fontsize=14)
-plt.xlabel("Wavenumber $k$ (sections$^{-1}$)", fontsize=12)
-plt.ylabel("Frequency (kHz)", fontsize=12)
-plt.legend()
+plt.rc("axes", labelsize=14)
+plt.rc("xtick", labelsize=14)
+plt.rc("ytick", labelsize=14)
+
+plt.plot(k, frequencies / 1000, "b.", linewidth=2, label="Finite line")
+plt.title("Dispersion Relation", fontsize=16)
+plt.xlabel("Wavenumber $k$ [sections$^{-1}$]", fontsize=16)
+plt.ylabel("Frequency [kHz]", fontsize=16)
+plt.legend(fontsize=16)
 plt.tight_layout()
-plt.savefig("figures/dispersion_comparison.pdf")
 plt.savefig("figures/dispersion_comparison.png")
 plt.show()

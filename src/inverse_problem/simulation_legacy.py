@@ -6,10 +6,10 @@ import matplotlib.pyplot as plt
 import time
 from numba import njit
 
-simulation_on = True
+simulation_on = False
 
 if simulation_on:
-    simulation_number = 8600
+    simulation_number = 10000
 else:
     simulation_number = 1
 
@@ -30,13 +30,18 @@ N_ind = N - 1
 R_L_0 = 0.730
 dR_L = 0.1 * R_L_0
 
+# Shunt conductance in capacitors
+G_C_0 = 0
+dG_C = 0.1 * G_C_0
+
 # Resistance ratio at 796 kHz from quality factor
 f_test = 796e3
 Q_test = 65
 R_ratio_test = 2 * np.pi * f_test * L_0 / Q_test / R_L_0
 
 # Model R_AC = R_DC * (1 + k_power * f**power_rule)
-power_rule_0 = 1.25
+power_rule = 1.2
+k_power_0 = (R_ratio_test - 1) / f_test**power_rule
 
 # Oscilloscope AWG Parameters for input function
 awg_frequency = 500.0
@@ -102,19 +107,19 @@ def H_func_global(V_in_data, V_out_data, t_array, freqs, t_std):
     masking out the noisy tails of the Gaussian wavepackets.
     """
     dt = t_array[1] - t_array[0]
-    # Calculate the frequency standard deviation theoretically
-    f_std_2 = 1.0 / (2 * np.pi * t_std) / 2
 
     if not isinstance(V_in_data, list):
         V_in_data = [V_in_data]
         V_out_data = [V_out_data]
 
     y0 = fft.fftfreq(len(V_in_data[0]), d=dt)
-    mask_pos = (y0 > (freqs[0] - f_std_2)) & (y0 < 150e3)
+    mask_pos = y0 > 0
     y0 = y0[mask_pos]
 
     S_xx = np.zeros(len(y0))
     S_xy = np.zeros(len(y0), dtype=complex)
+    # Calculate the frequency standard deviation theoretically
+    f_std = 1.0 / (2 * np.pi * t_std) / 2
 
     # Track which frequency bins received valid data to avoid zero-division later
     coverage_mask = np.zeros(len(y0), dtype=bool)
@@ -127,7 +132,7 @@ def H_func_global(V_in_data, V_out_data, t_array, freqs, t_std):
         P_in = np.abs(z_in) ** 2
 
         # Identify the high-energy region of this specific wavepacket
-        valid_bins = (y0 >= f_mean - f_std_2) & (y0 <= f_mean + f_std_2)
+        valid_bins = (y0 >= f_mean - f_std) & (y0 <= f_mean + f_std)
 
         # Accumulate only the significant bins (cutting off the noisy tails)
         S_xx[valid_bins] += P_in[valid_bins]
@@ -146,15 +151,13 @@ def H_func_global(V_in_data, V_out_data, t_array, freqs, t_std):
 
 for _ in range(simulation_number):
     # Domain Randomization Parameters
-    power_rule = np.random.normal(power_rule_0, 0.02 * power_rule_0)
+    k_power = np.random.normal(k_power_0, 0.1 * k_power_0)  # ~10% variation
     R_in = np.random.normal(R_in_0, R_in_0 * 0.05)  # 5% tolerance on input resistor
     R_out_mult = np.random.normal(1.0, 0.05)  # 5% tolerance on output resistors
     noise_std = np.random.uniform(0.5e-3, 2.0e-3)  # Varying noise floor
     global_temp_drift = np.random.uniform(0.98, 1.02)  # +/- 2% global capacitance drift
-    C_batch_factor = np.random.uniform(1.0, 5.0)
-    L_batch_factor = np.random.uniform(1.0, 5.0)
-
-    k_power = (R_ratio_test - 1) / f_test**power_rule_0
+    C_batch_factor = np.random.normal(2.5, 1.0)
+    L_batch_factor = np.random.normal(2.5, 1.0)
 
     # Build the Matrices (randomized)
     C = np.concatenate(
@@ -165,6 +168,7 @@ for _ in range(simulation_number):
         )
     )
     C *= global_temp_drift
+    G_C = np.random.normal(G_C_0, dG_C, N)
 
     L = np.random.normal(L_0, dL / L_batch_factor, N - 1)
     R_L = np.random.normal(R_L_0, dR_L, N - 1)
@@ -178,7 +182,7 @@ for _ in range(simulation_number):
     B = np.zeros(total_states)
 
     B[0] = 1 / (R_in * C[0])
-    A[0, 0] = -1 / (R_in * C[0])
+    A[0, 0] = -1 / (R_in * C[0]) - G_C[0] / C[0]
     A[N - 1, total_states - 1] = 1 / C[-1]
 
     for i in range(N - 1):
@@ -187,6 +191,7 @@ for _ in range(simulation_number):
         A[N + i, i] = 1 / L[i]
         A[N + i, i + 1] = -1 / L[i]
         A[N + i, N + i] = -R_L[i] / L[i]
+        A[i + 1, i + 1] = -G_C[i + 1] / C[i + 1]
 
     V_in_all_runs = []
     V_out_nodes_all_runs = {node: [] for node in np.arange(1, 11) * 4}
@@ -205,7 +210,7 @@ for _ in range(simulation_number):
         R_out *= R_out_mult
 
         # Update the load boundary condition in the A matrix for this specific frequency
-        A[N - 1, N - 1] = -1 / (R_out * C[-1])
+        A[N - 1, N - 1] = -G_C[-1] / C[-1] - 1 / (R_out * C[-1])
 
         # --- Update Inductor AC Losses ---
         R_L_AC = R_L * (1 + k_power * f_c**power_rule)
@@ -240,7 +245,7 @@ for _ in range(simulation_number):
         freq_data[f"H_Phase_{node}"] = np.angle(H)
 
     # 7. Exporting Data via Parquet
-    output_dir = "data/inverse_problem/simulations_gaussians"
+    output_dir = "data/temp"
     os.makedirs(output_dir, exist_ok=True)
 
     existing_indices = []
@@ -260,13 +265,14 @@ for _ in range(simulation_number):
         "C_norm": C / C_0,
         "L_norm": np.pad(L / L_0, (0, 1), constant_values=0),
         "R_L_norm": np.pad(R_L / R_L_0, (0, 1), constant_values=0),
-        "power_rule": np.full(N, power_rule),
+        "k_power_norm": np.full(N, k_power / k_power_0),
         "R_in_norm": np.full(N, R_in / R_in_0),
         "R_out_mult": np.full(N, R_out_mult),
         "noise_std_mV": np.full(N, noise_std / 1e-3),
         "global_temp_drift": np.full(N, global_temp_drift),
         "C_batch_factor": np.full(N, C_batch_factor),
         "L_batch_factor": np.full(N, L_batch_factor),
+        "G_C": np.pad(G_C, (0, 0), constant_values=0),
     }
     df_targets = pd.DataFrame(target_data)
     df_targets.to_parquet(
@@ -324,8 +330,7 @@ for _ in range(simulation_number):
             plt.xlabel("Frequency (kHz)")
             plt.ylabel("Magnitude $|V_{40}(f) / V_0(f)|$")
             plt.title("System Resonances (Global Transfer Function)")
-            plt.xlim(0, 150)
-            # plt.xlim((frequencies[0] - (0.5 / (2 * np.pi * sigma))) / 1e3, 150)
+            plt.xlim(0, 160)
             plt.ylim(0, 1.2)
             plt.legend()
             plt.grid(True)

@@ -3,7 +3,7 @@ import pandas as pd
 import scipy.signal as signal
 
 for i in range(10):
-    file_path = "data/electrical/pulses_2/" + f"AMPPUL{i + 1:02d}.CSV"
+    file_path = "data/electrical/gaussian/" + f"AMPPUL{i + 1:02d}.CSV"
     data = pd.read_csv(file_path)
     t = data.iloc[:, 0].to_numpy()
     v_0 = data.iloc[:, 1].to_numpy()
@@ -22,7 +22,7 @@ for i in range(10):
     v_0 = v_0 - np.mean(v_0[len(v_0) // 2 :])
     v_38 = v_38 - np.mean(v_38[len(v_38) // 2 :])
 
-    output_path = "data/electrical/pulses_2/" + f"FILTERED{i + 1:02d}.CSV"
+    output_path = "data/electrical/gaussian/" + f"FILTERED{i + 1:02d}.CSV"
     df_out = pd.DataFrame(
         np.column_stack([t, v_0, v_38, v_in]), columns=data.columns[:4]
     )

@@ -2,3 +2,4 @@
 *.parquet
 __pycache__/
 .venv/
+**/FILTERED[0-9]*.CSV
