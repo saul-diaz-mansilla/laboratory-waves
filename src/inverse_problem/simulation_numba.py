@@ -9,7 +9,7 @@ from numba import njit
 simulation_on = True
 
 if simulation_on:
-    simulation_number = 8600
+    simulation_number = 10000
 else:
     simulation_number = 1
 
