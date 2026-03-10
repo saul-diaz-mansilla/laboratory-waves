@@ -146,32 +146,33 @@ def H_func_global(V_in_data, V_out_data, t_array, freqs, t_std, dz_exp=0.0):
     return H_global, y0, dH_global
 
 
-for sim_num in range(2):
-    # Domain Randomization Parameters
-    power_rule = np.random.normal(power_rule_0, 0.02 * power_rule_0)
-    R_in = np.random.normal(R_in_0, R_in_0 * 0.05)  # 5% tolerance on input resistor
-    R_out_mult = np.random.normal(1.0, 0.05)  # 5% tolerance on output resistors
-    noise_std = np.random.uniform(0.5e-3, 2.0e-3)  # Varying noise floor
-    global_temp_drift = np.random.uniform(0.98, 1.02)  # +/- 2% global capacitance drift
-    C_batch_factor = np.random.uniform(1.0, 5.0)
-    L_batch_factor = np.random.uniform(1.0, 5.0)
+# Domain Randomization Parameters
+power_rule = np.random.normal(power_rule_0, 0.02 * power_rule_0)
+R_in = np.random.normal(R_in_0, R_in_0 * 0.05)  # 5% tolerance on input resistor
+R_out_mult = np.random.normal(1.0, 0.05)  # 5% tolerance on output resistors
+noise_std = np.random.uniform(0.5e-3, 2.0e-3)  # Varying noise floor
+global_temp_drift = np.random.uniform(0.98, 1.02)  # +/- 2% global capacitance drift
+C_batch_factor = np.random.uniform(1.0, 5.0)
+L_batch_factor = np.random.uniform(1.0, 5.0)
 
-    k_power = (R_ratio_test - 1) / f_test**power_rule_0
-    if sim_num == 0:
-        k_power = 0.0
-
-    # Build the Matrices (randomized)
-    C = np.concatenate(
-        (
-            [np.random.normal(C_end, dC_end / C_batch_factor)],
-            np.random.normal(C_0, dC / C_batch_factor, N - 2),
-            [np.random.normal(C_end, dC_end / C_batch_factor)],
-        )
+# Build the Matrices (randomized)
+C = np.concatenate(
+    (
+        [np.random.normal(C_end, dC_end / C_batch_factor)],
+        np.random.normal(C_0, dC / C_batch_factor, N - 2),
+        [np.random.normal(C_end, dC_end / C_batch_factor)],
     )
-    C *= global_temp_drift
+)
+C *= global_temp_drift
 
-    L = np.random.normal(L_0, dL / L_batch_factor, N - 1)
-    R_L = np.random.normal(R_L_0, dR_L, N - 1)
+L = np.random.normal(L_0, dL / L_batch_factor, N - 1)
+R_L = np.random.normal(R_L_0, dR_L, N - 1)
+
+k_power = 0.0
+
+for sim_num in range(2):
+    if sim_num == 1:
+        k_power = (R_ratio_test - 1) / f_test**power_rule_0
 
     # Calculate theoretical cutoff angular frequency based on nominal values
     omega_c = 2.0 / np.sqrt(L_0 * C_0)
@@ -279,29 +280,99 @@ plt.rc("axes", labelsize=14)
 plt.rc("xtick", labelsize=14)
 plt.rc("ytick", labelsize=14)
 
-# Create a figure with two subplots, sharing x and y axes
-fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(6.4, 9.6))
+# Create a figure with two subplots
+fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(6.4, 9.6))  # 6.4, 4.8
+
+f_cutoff = np.sqrt(1 / L_0 / C_0) / np.pi
 
 # Top subplot: H_1 (k_power=0) vs H_exp
-ax1.plot(freqs_1 / 1e3, np.abs(H_1), "bo-", label="Simulation")
-ax1.errorbar(y0_exp / 1e3, np.abs(H_exp), yerr=dH_exp, fmt="ro-", label="Experiment")
-ax2.set_xlabel("Frequency (kHz)", fontsize=16)
-ax1.set_ylabel("$|V_{40}(f) / V_0(f)|$", fontsize=16)
-ax1.legend(loc="lower left", fontsize=12)
+(sim_1,) = ax1.plot(freqs_1 / 1e3, np.abs(H_1), "bo-", label="Simulation")
+exp_1 = ax1.errorbar(
+    y0_exp / 1e3, np.abs(H_exp), yerr=dH_exp, fmt="ro-", label="Experiment"
+)
+vline_1 = ax1.axvline(
+    x=f_cutoff / 1000,
+    color="k",
+    linestyle="--",
+    label=r"Cut-off frequency $f_c$",
+)
+
+handles_1 = [sim_1, exp_1, vline_1]
+labels_1 = [h.get_label() for h in handles_1]
+ax1.set_xlabel("Frequency [kHz]", fontsize=16)
+ax1.set_ylabel("$V_{40}(f) / V_0(f)$", fontsize=16)
+ax1.legend(handles_1, labels_1, loc="lower left", fontsize=12)
 ax1.set_xlim((frequencies[0] - (0.5 / (2 * np.pi * sigma))) / 1e3, 150)
 ax1.set_ylim(0, 1.2)
 
 # Bottom subplot: H_2 (randomized k_power) vs H_exp
-ax2.plot(freqs_2 / 1e3, np.abs(H_2), "bo-", label="Simulation")
-ax2.errorbar(y0_exp / 1e3, np.abs(H_exp), yerr=dH_exp, fmt="ro-", label="Experiment")
-ax2.set_xlabel("Frequency (kHz)", fontsize=16)
-ax2.set_ylabel("$|V_{40}(f) / V_0(f)|$", fontsize=16)
-ax2.legend(loc="lower left", fontsize=12)
-
-# Set common x and y limits
+(sim_2,) = ax2.plot(freqs_2 / 1e3, np.abs(H_2), "bo-", label="Simulation")
+exp_2 = ax2.errorbar(
+    y0_exp / 1e3, np.abs(H_exp), yerr=dH_exp, fmt="ro-", label="Experiment"
+)
+vline_2 = ax2.axvline(
+    x=f_cutoff / 1000,
+    color="k",
+    linestyle="--",
+    label=r"Cut-off frequency $f_c$",
+)
+handles_2 = [sim_2, exp_2, vline_2]
+labels_2 = [h.get_label() for h in handles_2]
+ax2.set_xlabel("Frequency [kHz]", fontsize=16)
+ax2.set_ylabel("$V_{40}(f) / V_0(f)$", fontsize=16)
+ax2.legend(handles_2, labels_2, loc="lower left", fontsize=12)
 ax2.set_xlim((frequencies[0] - (0.5 / (2 * np.pi * sigma))) / 1e3, 150)
 ax2.set_ylim(0, 1.2)
 
 plt.tight_layout()
 plt.savefig("figures/transfer_comparison.png")
+plt.show()
+
+
+# Create a figure with two subplots
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12.8, 4.8))
+
+f_cutoff = np.sqrt(1 / L_0 / C_0) / np.pi
+
+# Top subplot: H_1 (k_power=0) vs H_exp
+(sim_1,) = ax1.plot(freqs_1 / 1e3, np.abs(H_1), "bo-", label="Simulation")
+exp_1 = ax1.errorbar(
+    y0_exp / 1e3, np.abs(H_exp), yerr=dH_exp, fmt="ro-", label="Experimental data"
+)
+vline_1 = ax1.axvline(
+    x=f_cutoff / 1000,
+    color="k",
+    linestyle="--",
+    label=r"Cut-off frequency $f_c$",
+)
+
+handles_1 = [sim_1, exp_1, vline_1]
+labels_1 = [h.get_label() for h in handles_1]
+ax1.set_xlabel("Frequency [kHz]", fontsize=16)
+ax1.set_ylabel("$V_{40}(f) / V_0(f)$", fontsize=16)
+ax1.legend(handles_1, labels_1, loc="lower left", fontsize=12)
+ax1.set_xlim((frequencies[0] - (0.5 / (2 * np.pi * sigma))) / 1e3, 150)
+ax1.set_ylim(0, 1.2)
+
+# Bottom subplot: H_2 (randomized k_power) vs H_exp
+(sim_2,) = ax2.plot(freqs_2 / 1e3, np.abs(H_2), "bo-", label="Simulation")
+exp_2 = ax2.errorbar(
+    y0_exp / 1e3, np.abs(H_exp), yerr=dH_exp, fmt="ro-", label="Experimental data"
+)
+vline_2 = ax2.axvline(
+    x=f_cutoff / 1000,
+    color="k",
+    linestyle="--",
+    label=r"Cut-off frequency $f_c$",
+)
+handles_2 = [sim_2, exp_2, vline_2]
+labels_2 = [h.get_label() for h in handles_2]
+ax2.set_xlabel("Frequency [kHz]", fontsize=16)
+ax2.set_ylabel("$V_{40}(f) / V_0(f)$", fontsize=16)
+ax2.legend(handles_2, labels_2, loc="lower left", fontsize=12)
+ax2.set_xlim((frequencies[0] - (0.5 / (2 * np.pi * sigma))) / 1e3, 150)
+ax2.set_ylim(0, 1.2)
+
+plt.tight_layout()
+plt.savefig("figures/transfer_comparison_horizontal.png")
 plt.show()

@@ -296,32 +296,40 @@ plt.figure()
 plt.rc("axes", labelsize=14)
 plt.rc("xtick", labelsize=14)
 plt.rc("ytick", labelsize=14)
-plt.errorbar(
-    frequencies / 1000, ratio_V40_V0, yerr=ratio_error, fmt="bo", label="Simulation"
+sim = plt.errorbar(
+    frequencies / 1000,
+    ratio_V40_V0,
+    yerr=ratio_error,
+    fmt="bo",
+    label="Simulation",
 )
-plt.errorbar(w * 1e-3 / 2 / np.pi, ratio, yerr=d_ratio, fmt="ro", label="Experimental")
-plt.plot(
+exp = plt.errorbar(
+    w * 1e-3 / 2 / np.pi, ratio, yerr=d_ratio, fmt="ro", label="Experimental data"
+)
+(sim_fit,) = plt.plot(
     frequencies / 1000,
     linear_func(frequencies, *popt_sim),
     "b--",
     label="Simulation Fit",
 )
-plt.plot(
+(exp_fit,) = plt.plot(
     frequencies / 1000,
     linear_func(frequencies, *popt_exp),
     "r--",
     label="Experimental Fit",
 )
-plt.axvline(
+vline = plt.axvline(
     x=f_cutoff / 1000,
     color="k",
     linestyle="--",
     label=r"Cut-off frequency $f_c$",
 )
-plt.title("Steady-State Amplitude Ratio", fontsize=16)
+handles = [sim, exp, sim_fit, exp_fit, vline]
+labels = [h.get_label() for h in handles]
+
 plt.xlabel("Frequency [kHz]", fontsize=16)
-plt.ylabel("Amplitude Ratio $V_{40} / V_0$", fontsize=16)
-plt.legend(loc="lower left", fontsize=14)
+plt.ylabel("$V_{40} / V_0$", fontsize=16)
+plt.legend(handles, labels, loc="lower left", fontsize=14)
 plt.tight_layout()
 plt.savefig("figures/ratio_comparison.png")
 plt.show()
