@@ -1,54 +1,55 @@
-import os
 import torch
-import pandas as pd
 import numpy as np
 from torch.utils.data import Dataset
+import src.utils.io as io
 
 
 class TransmissionLineDataset(Dataset):
-    def __init__(self, data_dir, num_samples, preload_to_ram=True):
+    def __init__(self, data_dir, preload_to_ram=True):
         """
-        Loads the exported parquet files.
-        Preloading to RAM is highly recommended for 10k files to avoid disk I/O bottlenecks.
+        Loads the chunked parquet files using the unified io loader.
+        Preloading to RAM converts the entire Pandas DataFrame into stacked
+        PyTorch tensors instantly for maximum GPU throughput.
         """
         self.data_dir = data_dir
-        self.num_samples = num_samples
         self.preload = preload_to_ram
 
-        self.x_data = []
-        self.y_data = []
+        # Load the unified dataframes
+        print(f"Reading chunked Parquet files from {data_dir}...")
+        self.df_results = io.load_parquet_data(data_dir, prefix="results_")
+        self.df_targets = io.load_parquet_data(data_dir, prefix="targets_")
+
+        # Ensure data integrity across both files
+        assert len(self.df_results) == len(self.df_targets), (
+            "Mismatch in number of simulations between results and targets."
+        )
+        self.num_samples = len(self.df_results)
+
+        # Drop frequency axis if it accidentally leaked into results
+        self.feature_cols = [c for c in self.df_results.columns if "Frequency" not in c]
+        self.df_results = self.df_results[self.feature_cols]
 
         if self.preload:
             print(
-                f"Preloading {num_samples} simulations into RAM. This may take a moment..."
+                f"Preloading {self.num_samples} simulations into PyTorch Tensors. This will be fast..."
             )
-            for i in range(1, num_samples + 1):
-                x, y = self._load_single_simulation(i)
-                self.x_data.append(x)
-                self.y_data.append(y)
-            print("Preloading complete.")
 
-    def _load_single_simulation(self, file_idx):
-        freq_path = os.path.join(self.data_dir, f"freq_data_{file_idx}.parquet")
-        target_path = os.path.join(self.data_dir, f"targets_{file_idx}.parquet")
+            # --- X DATA (Features) ---
+            results_arrays = [np.stack(row) for row in self.df_results.values]
+            self.x_data = torch.tensor(np.array(results_arrays), dtype=torch.float32)
 
-        df_freq = pd.read_parquet(freq_path)
+            # --- Y DATA (Targets) ---
+            # Extract C_norm and L_norm columns (each cell is a list of length N)
+            c_norm_arrays = np.stack(self.df_targets["C_norm"].values)
+            l_norm_arrays = np.stack(self.df_targets["L_norm"].values)
 
-        if "Frequency (Hz)" in df_freq.columns:
-            df_freq = df_freq.drop(columns=["Frequency (Hz)"])
+            # Concatenate along the node dimension to create (num_samples, 2*N)
+            targets_arrays = np.concatenate([c_norm_arrays, l_norm_arrays], axis=1)
+            self.y_data = torch.tensor(targets_arrays, dtype=torch.float32)
 
-        df_targets = pd.read_parquet(target_path)
-
-        # 20 channels, transposing to (20, 160)
-        freq_tensor = torch.tensor(df_freq.values.T, dtype=torch.float32)
-
-        c_norm = df_targets["C_norm"].values
-        l_norm = df_targets["L_norm"].values
-        target_tensor = torch.tensor(
-            np.concatenate([c_norm, l_norm]), dtype=torch.float32
-        )
-
-        return freq_tensor, target_tensor
+            print(
+                f"Preloading complete. X shape: {self.x_data.shape}, Y shape: {self.y_data.shape}"
+            )
 
     def __len__(self):
         return self.num_samples
@@ -57,5 +58,14 @@ class TransmissionLineDataset(Dataset):
         if self.preload:
             return self.x_data[idx], self.y_data[idx]
         else:
-            # 1-based indexing for filenames
-            return self._load_single_simulation(idx + 1)
+            # Lazy loading directly from the DataFrame rows
+            row_res = self.df_results.iloc[idx]
+            x_tensor = torch.tensor(np.stack(row_res.values), dtype=torch.float32)
+
+            c_norm = self.df_targets["C_norm"].iloc[idx]
+            l_norm = self.df_targets["L_norm"].iloc[idx]
+            y_tensor = torch.tensor(
+                np.concatenate([c_norm, l_norm]), dtype=torch.float32
+            )
+
+            return x_tensor, y_tensor
