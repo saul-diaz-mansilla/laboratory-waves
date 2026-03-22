@@ -1,0 +1,12 @@
+# Config for gaussian_matched
+
+parameters:
+  circuit_config: "config/circuit/default.yaml"
+  input_config: "config/input/gaussian_1.yaml"
+  simulation_config: "config/simulation/nn_training.yaml"
+
+paths:
+  raw_dir: "data/raw/gaussian_matched"
+  processed_dir: "data/processed/gaussian_matched"
+  simulation_dir: "data/simulated/gaussian_matched"
+  metadata_dir: "data/metadata/gaussian_matched.xlsx"

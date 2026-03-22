@@ -5,7 +5,7 @@
 paths:
   circuit_config: "configs/circuit/default.yaml"
   input_config: "configs/input/gaussian_1.yaml"
-  output_dir: "data/simulated/gaussian_1"
+  output_dir: "data/simulated/gaussian_matched"
 
 # Execution configuration
 execution:
