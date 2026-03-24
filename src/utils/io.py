@@ -18,15 +18,15 @@ def load_config(file_path):
         return yaml.safe_load(file)
 
 
-def save_parquet(data, output_dir, name):
+def save_parquet(data, output_dir, prefix):
     """
-    Saves a dictionary of data into a parquet file. Takes into account previous simulations with the same name
+    Saves a dictionary of data into a parquet file. Takes into account previous simulations with the same prefix
     to avoid overwriting.
 
     Inputs:
         data (dict): The dictionary to be saved.
         output_dir (str): The directory where the parquet file will be saved.
-        name (str): The base name for the parquet file.
+        prefix (str): The prefix of the parquet files (e.g., 'results_', 'targets_', 'axes_').
 
     Outputs:
         None
@@ -34,19 +34,19 @@ def save_parquet(data, output_dir, name):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    if not isinstance(name, str):
-        raise TypeError("Name must be a string.")
+    if not isinstance(prefix, str):
+        raise TypeError("Prefix must be a string.")
 
     existing_indices = []
     for f in os.listdir(output_dir):
-        if f.startswith(name) and f.endswith(".parquet"):
-            existing_indices.append(int(f[len(name) : -8]))
+        if f.startswith(prefix) and f.endswith(".parquet"):
+            existing_indices.append(int(f[len(prefix) : -8]))
 
     next_idx = max(existing_indices) + 1 if existing_indices else 1
 
     df_freq = pd.DataFrame(data)
     df_freq.to_parquet(
-        os.path.join(output_dir, name + f"{next_idx}.parquet"), engine="pyarrow"
+        os.path.join(output_dir, prefix + f"{next_idx}.parquet"), engine="pyarrow"
     )
 
 

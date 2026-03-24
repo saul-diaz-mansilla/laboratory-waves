@@ -1,8 +1,8 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 
-exp_file = "data/raw/pulse_single/AMPPUL04.CSV"
-data_exp = pd.read_csv(exp_file)
+exp_file = "data/processed/gaussian_matched/AMPPUL30.parquet"
+data_exp = pd.read_parquet(exp_file)
 t_exp = data_exp.iloc[:, 0].to_numpy()
 v0_exp = data_exp.iloc[:, 1].to_numpy()
 v40_exp = data_exp.iloc[:, 2].to_numpy()

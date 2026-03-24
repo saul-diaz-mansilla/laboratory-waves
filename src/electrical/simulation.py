@@ -21,9 +21,10 @@ def simulate(config_path):
     - all_targets (dict): Dictionary containing the randomized parameters for each simulation. Contains "C_norm", "L_norm",
     "R_L_norm", "power_rule", "R_in_norm", "R_out_mult", "noise_std_mV", "global_temp_drift", "C_batch_factor",
     and "L_batch_factor" keys.
-    - all_results (dict): Dictionary containing the simulation results (time series or transfer functions). Contains
-    "Frequency (Hz)", "H_Mag_{node}", and "H_Phase_{node}" keys for all target nodes.
-
+    - all_results (dict): Dictionary containing the simulation results (time series or transfer functions). For transfer
+    function mode, contains "H_Mag_{node}", and "H_Phase_{node}" keys for all target nodes. For time series mode,
+    contains "V_0" and "V_{node}" keys for all target nodes.
+    - all_freqs (dict): Dictionary containing "freqs_global", which contains the common frequency axis for transfer funcions.
     """
 
     # Import master config from yaml file
@@ -159,9 +160,14 @@ def simulate(config_path):
         "L_batch_factor": [],
     }
     all_results = {}
-    for node in target_nodes:
-        all_results[f"H_Mag_{node}"] = []
-        all_results[f"H_Phase_{node}"] = []
+    if output_mode == "transfer_function":
+        for node in target_nodes:
+            all_results[f"H_Mag_{node}"] = []
+            all_results[f"H_Phase_{node}"] = []
+    elif output_mode == "time_series":
+        all_results["V_0"] = []
+        for node in target_nodes:
+            all_results[f"V_{node}"] = []
 
     # * ------ START SIMULATION LOOP ------
     for sim_num in range(num_simulations):
@@ -273,19 +279,20 @@ def simulate(config_path):
                         t_eval_points,
                         frequencies,
                         sigma,
-                    )  # TODO: update parameter inputs when new H functions are implemented
+                    )
                 elif waveform == "sine":
                     H, freqs_global = signals.H_sine(
                         V_in_all_runs,
                         V_out_nodes_all_runs[node],
                         t_eval_points,
                         frequencies,
-                    )  # TODO: update parameter inputs when new H functions are implemented
+                    )
                 elif waveform == "pulse":
                     H, freqs_global = signals.H_pulse(
                         V_in_all_runs,
                         V_out_nodes_all_runs[node],
                         t_eval_points,
+                        pulse_width,
                     )
 
                 all_results[f"H_Mag_{node}"].append(np.abs(H).tolist())
@@ -293,10 +300,9 @@ def simulate(config_path):
 
         # TODO: Update time series output
         elif output_mode == "time_series":
-            all_results[sim_num] = {
-                "V_in": V_in_all_runs,
-                "V_out": V_out_nodes_all_runs,
-            }
+            all_results["V_0"].append(V_in_all_runs)
+            for node in target_nodes:
+                all_results[f"V_{node}"].append(V_out_nodes_all_runs[node])
 
     # * ------ END SIMULATION LOOP ------
     all_freqs = {"freqs_global": [freqs_global.tolist()]}

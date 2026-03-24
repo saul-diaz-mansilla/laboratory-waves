@@ -3,3 +3,4 @@
 __pycache__/
 .venv/
 **/FILTERED[0-9]*.CSV
+processed/

@@ -16,7 +16,7 @@ def main():
         "--config",
         type=str,
         required=True,
-        help="Path to the master simulation configuration file in YAML format",
+        help="Path to the master experimental configuration file. Located in configs/experiment",
     )
 
     args = parser.parse_args()
@@ -28,9 +28,9 @@ def main():
     all_targets, all_results, all_freqs = simulate(config_path)
 
     # Save data to PARQUET files
-    io.save_parquet(all_targets, output_dir, name="targets_")
-    io.save_parquet(all_results, output_dir, name="results_")
-    io.save_parquet(all_freqs, output_dir, name="freqs_")
+    io.save_parquet(all_targets, output_dir, prefix="targets_")
+    io.save_parquet(all_results, output_dir, prefix="results_")
+    io.save_parquet(all_freqs, output_dir, prefix="freqs_")
 
 
 if __name__ == "__main__":

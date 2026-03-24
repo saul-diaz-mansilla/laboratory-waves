@@ -15,13 +15,15 @@ import src.utils.visualization as vis
 
 def main():
     # Set up argparse
-    parser = argparse.ArgumentParser(description="Simulate transmission line")
+    parser = argparse.ArgumentParser(
+        description="Plot experimental vs simulated transfer function"
+    )
 
     parser.add_argument(
         "--config",
         type=str,
         required=True,
-        help="Path to the master simulation configuration file in YAML format",
+        help="Path to the master experimental configuration file. Located in configs/experiment",
     )
 
     args = parser.parse_args()
@@ -29,7 +31,7 @@ def main():
 
     exp_parameters = io.load_config(config_path)
     # Path management
-    exp_dir = exp_parameters["paths"]["raw_dir"]
+    exp_dir = exp_parameters["paths"]["processed_dir"]
     sim_dir = exp_parameters["paths"]["simulation_dir"]
     circuit_parameters = io.load_config(exp_parameters["paths"]["circuit_config"])
     f_cutoff = (
@@ -48,10 +50,10 @@ def main():
     exp_v0_all = []
     exp_v40_all = []
 
-    all_exp_files = list(Path(exp_dir).glob("*.csv"))
+    all_exp_files = list(Path(exp_dir).glob("*.parquet"))
 
     for file_path in all_exp_files:
-        data_exp = pd.read_csv(file_path)
+        data_exp = pd.read_parquet(file_path)
         t_raw = data_exp.iloc[:, 0].to_numpy()
         v0_raw = data_exp.iloc[:, 1].to_numpy()
         v40_raw = data_exp.iloc[:, 2].to_numpy()
