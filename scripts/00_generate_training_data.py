@@ -22,7 +22,7 @@ def main():
     args = parser.parse_args()
     config_path = args.config
     config_parameters = io.load_config(config_path)
-    output_dir = config_parameters["paths"]["output_dir"]
+    output_dir = config_parameters["paths"]["simulation_dir"]
 
     # Run simulation
     all_targets, all_results, all_freqs = simulate(config_path)

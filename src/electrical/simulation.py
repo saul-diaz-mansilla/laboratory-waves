@@ -15,7 +15,7 @@ def simulate(config_path):
     Uses Monte Carlo methods to add variations to the base parameters.
 
     Inputs:
-    - config_path (str): path to the ".yaml" master config file
+    - config_path (str): path to the ".yaml" master config file (config/experiment)
 
     Outputs:
     - all_targets (dict): Dictionary containing the randomized parameters for each simulation. Contains "C_norm", "L_norm",
@@ -27,20 +27,19 @@ def simulate(config_path):
     """
 
     # Import master config from yaml file
-    config_parameters = io.load_config(config_path)
-    circuit_path = config_parameters["paths"]["circuit_config"]
-    input_path = config_parameters["paths"]["input_config"]
+    exp_parameters = io.load_config(config_path)
+    circuit_path = exp_parameters["paths"]["circuit_config"]
+    sim_path = exp_parameters["paths"]["simulation_config"]
 
     # Import circuit and input parameters from yaml files
     circuit_parameters = io.load_config(circuit_path)
-    input_parameters = io.load_config(input_path)
+    sim_parameters = io.load_config(sim_path)
 
     # Simulation config
-    num_points = config_parameters["execution"]["num_points"]
-    num_simulations = config_parameters["execution"]["num_simulations"]
-    output_mode = config_parameters["execution"]["output_mode"]
-    match_impedance = config_parameters["execution"]["match_impedance"]
-    target_nodes = config_parameters["execution"]["target_nodes"]
+    num_points = sim_parameters["execution"]["num_points"]
+    num_simulations = sim_parameters["execution"]["num_simulations"]
+    output_mode = sim_parameters["execution"]["output_mode"]
+    target_nodes = sim_parameters["execution"]["target_nodes"]
 
     if output_mode not in ["time_series", "transfer_function"]:
         raise ValueError(
@@ -76,28 +75,29 @@ def simulate(config_path):
     dpower_rule = circuit_parameters["power_rule"]["tolerance"]
 
     # Domain randomization configs
-    noise_min = config_parameters["randomization"]["noise_min"]
-    noise_max = config_parameters["randomization"]["noise_max"]
-    temp_drift = config_parameters["randomization"]["temp_drift"]
-    L_batch_max = config_parameters["randomization"]["L_batch_max"]
-    C_batch_max = config_parameters["randomization"]["C_batch_max"]
+    noise_min = sim_parameters["randomization"]["noise_min"]
+    noise_max = sim_parameters["randomization"]["noise_max"]
+    temp_drift = sim_parameters["randomization"]["temp_drift"]
+    L_batch_max = sim_parameters["randomization"]["L_batch_max"]
+    C_batch_max = sim_parameters["randomization"]["C_batch_max"]
 
     # Input function shape and parameters
-    waveform = input_parameters["waveform"]
-    duration = input_parameters["duration"]
+    waveform = exp_parameters["input"]["waveform"]
+    duration = exp_parameters["input"]["duration"]
+    match_impedance = exp_parameters["input"]["match_impedance"]
 
     # RK4 parameters
     t_eval_points = np.linspace(0, duration, num_points, endpoint=False)
 
     # Input function values for all frequencies and times
     if waveform == "gaussian":
-        f_start = input_parameters["f_start"]
-        f_end = input_parameters["f_end"]
-        num_inputs = input_parameters["num_inputs"]
+        f_start = exp_parameters["input"]["f_start"]
+        f_end = exp_parameters["input"]["f_end"]
+        num_inputs = exp_parameters["input"]["num_inputs"]
         frequencies = np.linspace(f_start, f_end, num_inputs)
-        t0 = input_parameters["t0"]
-        sigma = input_parameters["sigma"]
-        amplitude = input_parameters["amplitude"]
+        t0 = exp_parameters["input"]["t0"]
+        sigma = exp_parameters["input"]["sigma"]
+        amplitude = exp_parameters["input"]["amplitude"]
 
         V_gen_all_freqs = {
             frequency: (
@@ -108,11 +108,11 @@ def simulate(config_path):
             for frequency in frequencies
         }
     elif waveform == "sine":
-        f_start = input_parameters["f_start"]
-        f_end = input_parameters["f_end"]
-        num_inputs = input_parameters["num_inputs"]
+        f_start = exp_parameters["input"]["f_start"]
+        f_end = exp_parameters["input"]["f_end"]
+        num_inputs = exp_parameters["input"]["num_inputs"]
         frequencies = np.linspace(f_start, f_end, num_inputs)
-        amplitude = input_parameters["amplitude"]
+        amplitude = exp_parameters["input"]["amplitude"]
 
         V_gen_all_freqs = {
             frequency: (amplitude * np.sin(2 * np.pi * frequency * t_eval_points))
@@ -120,9 +120,9 @@ def simulate(config_path):
         }
     elif waveform == "pulse":
         frequencies = np.array([0])
-        pulse_width = input_parameters["width"]
-        pulse_height = input_parameters["amplitude"]
-        t_rise = input_parameters["t_rise"]
+        pulse_width = exp_parameters["input"]["width"]
+        pulse_height = exp_parameters["input"]["amplitude"]
+        t_rise = exp_parameters["input"]["t_rise"]
 
         rise_section = np.where(t_eval_points < t_rise)[0]
         plateau_section = np.where(

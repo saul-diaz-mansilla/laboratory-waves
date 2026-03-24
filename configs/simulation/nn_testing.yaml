@@ -1,12 +1,6 @@
 # Simulation parameters
 # Used for transfer function generation for neural network analysis
 
-# Paths
-paths:
-  circuit_config: "configs/circuit/default.yaml"
-  input_config: "configs/input/gaussian_1.yaml"
-  output_dir: "data/simulated/gaussian_matched"
-
 # Execution configuration
 execution:
   # Number of simulations
@@ -14,9 +8,6 @@ execution:
 
   # Number of points of integration
   num_points: 10000
-
-  # Match impedance of mean frequency
-  match_impedance: True
 
   # Target nodes (where data is extracted from)
   target_nodes: [4, 8, 12, 16, 20, 24, 28, 32, 36, 40]

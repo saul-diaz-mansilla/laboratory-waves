@@ -31,6 +31,9 @@ def save_parquet(data, output_dir, name):
     Outputs:
         None
     """
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
     if not isinstance(name, str):
         raise TypeError("Name must be a string.")
 
