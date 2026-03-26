@@ -55,6 +55,8 @@ def run_single_simulation(sim_num):
     V_gen_all_freqs = sim_args["V_gen_all_freqs"]
     target_nodes = sim_args["target_nodes"]
     output_mode = sim_args["output_mode"]
+    L_custom = sim_args.get("L_custom")
+    C_custom = sim_args.get("C_custom")
 
     # Domain Randomization Parameters
     power_rule = rng.normal(power_rule_0, dpower_rule)
@@ -67,16 +69,22 @@ def run_single_simulation(sim_num):
 
     k_power = (R_L_ratio - 1) / f_test**power_rule_0
 
-    C = np.concatenate(
-        (
-            [rng.normal(C_end, dC_end / C_batch_factor)],
-            rng.normal(C_0, dC / C_batch_factor, N - 2),
-            [rng.normal(C_end, dC_end / C_batch_factor)],
+    if C_custom is not None:
+        C = np.array(C_custom)
+    else:
+        C = np.concatenate(
+            (
+                [rng.normal(C_end, dC_end / C_batch_factor)],
+                rng.normal(C_0, dC / C_batch_factor, N - 2),
+                [rng.normal(C_end, dC_end / C_batch_factor)],
+            )
         )
-    )
-    C *= global_temp_drift
+        C *= global_temp_drift
 
-    L = rng.normal(L_0, dL / L_batch_factor, N - 1)
+    if L_custom is not None:
+        L = np.array(L_custom)
+    else:
+        L = rng.normal(L_0, dL / L_batch_factor, N - 1)
     R_L = rng.normal(R_L_0, dR_L, N - 1)
 
     omega_c = 2.0 / np.sqrt(L_0 * C_0)
@@ -184,13 +192,15 @@ def run_single_simulation(sim_num):
     return target_data, result_data, freqs_global
 
 
-def simulate(config_path):
+def simulate(config_path, L_custom=None, C_custom=None):
     """
     Main simulation core. Includes internal resistances in inductors and frequency dependence in R with a power rule.
     Uses Monte Carlo methods to add variations to the base parameters.
 
     Inputs:
     - config_path (str): path to the ".yaml" master config file (config/experiment)
+    - L_custom (list or np.ndarray): custom inductance array (bypasses randomizer). Default is None.
+    - C_custom (list or np.ndarray): custom capacitance array (bypasses randomizer). Default is None.
 
     Outputs:
     - all_targets (dict): Dictionary containing the randomized parameters for each simulation. Contains "C_norm", "L_norm",
@@ -360,6 +370,8 @@ def simulate(config_path):
         "V_gen_all_freqs": V_gen_all_freqs,
         "target_nodes": target_nodes,
         "output_mode": output_mode,
+        "L_custom": L_custom,
+        "C_custom": C_custom,
     }
 
     if waveform == "gaussian":
