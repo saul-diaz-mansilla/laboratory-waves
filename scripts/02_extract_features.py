@@ -110,8 +110,10 @@ def main():
             all_freqs_data["freqs_global"] = [freqs_global_node.tolist()]
 
     # Save all collected results and frequencies after processing all nodes
-    io.save_parquet(all_results, exp_dir, prefix="results_")
-    io.save_parquet(all_freqs_data, exp_dir, prefix="freqs_")
+    df_results = pd.DataFrame(all_results)
+    df_results.to_parquet(os.path.join(exp_dir, "results_1.parquet"), engine="pyarrow")
+    df_freq = pd.DataFrame(all_freqs_data)
+    df_freq.to_parquet(os.path.join(exp_dir, "freqs_1.parquet"), engine="pyarrow")
 
 
 if __name__ == "__main__":

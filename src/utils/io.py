@@ -49,7 +49,7 @@ def save_parquet(data, output_dir, prefix):
     Inputs:
         data (dict): The dictionary to be saved.
         output_dir (str): The directory where the parquet file will be saved.
-        prefix (str): The prefix of the parquet files (e.g., 'results_', 'targets_', 'axes_').
+        prefix (str): The prefix of the parquet files (e.g., 'results_', 'targets_', 'freqs_').
 
     Outputs:
         None
@@ -67,8 +67,8 @@ def save_parquet(data, output_dir, prefix):
 
     next_idx = max(existing_indices) + 1 if existing_indices else 1
 
-    df_freq = pd.DataFrame(data)
-    df_freq.to_parquet(
+    df = pd.DataFrame(data)
+    df.to_parquet(
         os.path.join(output_dir, prefix + f"{next_idx}.parquet"), engine="pyarrow"
     )
 

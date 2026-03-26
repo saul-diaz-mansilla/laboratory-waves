@@ -208,19 +208,6 @@ def simulate(config_path):
 
         # Build First-Order V-I State-Space Matrices
         total_states = 2 * N - 1
-        A = np.zeros((total_states, total_states))
-        B = np.zeros(total_states)
-
-        B[0] = 1 / (R_in * C[0])
-        A[0, 0] = -1 / (R_in * C[0])
-        A[N - 1, total_states - 1] = 1 / C[-1]
-
-        i = np.arange(N - 1)
-
-        A[i, N + i] = -1 / C[i]
-        A[i + 1, N + i] = 1 / C[i + 1]
-        A[N + i, i] = 1 / L[i]
-        A[N + i, i + 1] = -1 / L[i]
 
         V_in_all_runs = []
         V_out_nodes_all_runs = {node: [] for node in np.arange(1, 41)}
@@ -242,18 +229,15 @@ def simulate(config_path):
 
             R_out *= R_out_mult
 
-            # Update the load boundary condition in the A matrix for this specific frequency
-            A[N - 1, N - 1] = -1 / (R_out * C[-1])
-
             # Update Inductor AC Losses
             R_L_AC = R_L * (1 + k_power * f_current**power_rule)
-            idx = np.arange(N, 2 * N - 1)
-            A[idx, idx] = -R_L_AC / L
             Y0 = np.zeros(total_states)
 
             V_gen = V_gen_all_freqs[f_current]
 
-            Y_all = solver.rk4_solve(t_eval_points, Y0, A, B, V_gen)
+            Y_all = solver.rk4_solve(
+                t_eval_points, Y0, C, L, R_L_AC, R_in, R_out, V_gen
+            )
             V_clean = Y_all[:N, :]
 
             V_noisy = V_clean + np.random.normal(0, noise_std, V_clean.shape)

@@ -77,7 +77,7 @@ def main():
     vis.axes_transfer_function(ax1)
 
     plt.tight_layout()
-    plt.savefig("figures/05_transfer_comparison.png")
+    plt.savefig("figures/07_trend_comparison.png")
 
 
 if __name__ == "__main__":

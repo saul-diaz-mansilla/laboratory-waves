@@ -34,4 +34,4 @@ input:
   f_start: 2000  # Hz
 
   # Last frequency of wavepacket
-  f_end: 140000  # Hz
+  f_end: 145000  # Hz

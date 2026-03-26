@@ -51,6 +51,7 @@ def main():
     H_node_exp = df_results[f"H_Phase_{node}"].iloc[sim_index]
     k_exp = -np.unwrap(H_node_exp) / node
 
+    # ! PHASE UNWRAPPING CURRENTLY MALFUNCTIONING
     # wrap_threshold = np.pi / node  # Half a wrap is a safe detection threshold
 
     # for i in range(1, len(k_exp)):
