@@ -1,8 +1,8 @@
-# Config for sine_matched_base
+# Config for sine_matchedS
 
 # Paths to configs and data
 paths:
-  circuit_config: "configs/circuit/base.yaml"
+  circuit_config: "configs/circuit/default.yaml"
   simulation_config: "configs/simulation/testing_1.yaml"
 
   # Experimental data files and directories
@@ -11,7 +11,7 @@ paths:
   metadata: "data/metadata/sine_matched.csv"
 
   # Output for simulations
-  simulation_dir: "data/simulated/sine_matched_base"
+  simulation_dir: "data/simulated/sine_matched_testing"
 
 # Simulation parameters for input signal
 input:
@@ -19,7 +19,7 @@ input:
   waveform: "sine"
 
   # Match impedance of mean frequency
-  match_impedance: True
+  match_impedance: False
 
   # Number of sines
   num_inputs: 50

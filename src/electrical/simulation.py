@@ -315,10 +315,10 @@ def simulate(config_path):
 
         if sim_num == 0:
             print(
-                f"Estimated total time: {(time_start - time.time()) * num_simulations}"
+                f"Estimated total time: {(time.time() - time_start) * num_simulations / 3600} hours"
             )
         if sim_num % 100 == 0:
-            print(f"Elapsed time: {time.time() - time_start}")
+            print(f"Elapsed time: {time.time() - time_start} seconds")
     # * ------ END SIMULATION LOOP ------
     all_freqs = {"freqs_global": [freqs_global.tolist()]}
     return all_targets, all_results, all_freqs

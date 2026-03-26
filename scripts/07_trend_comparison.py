@@ -1,6 +1,3 @@
-# TODO: CHANGE FILE
-# ! PLACEHOLDER FILE DO NOT USE
-
 import os
 import sys
 import argparse
@@ -51,6 +48,7 @@ def main():
 
     sim_index = 0
     H_40_exp = df_results["H_Mag_40"].iloc[sim_index]
+    coeff_exp = np.polyfit(f_exp, H_40_exp, 1)
 
     # Find simulated data
     df_results = io.load_parquet_data(sim_dir, prefix="results_")
@@ -59,6 +57,7 @@ def main():
     f_sim = df_axes["freqs_global"].iloc[0]
 
     H_40_sim = df_results["H_Mag_40"].iloc[sim_index]
+    coeff_sim = np.polyfit(f_sim, H_40_sim, 1)
 
     # Plotting logic
     _, ax1 = plt.subplots(**vis.apply_standard_style(1, 1))
@@ -68,6 +67,10 @@ def main():
         H_40_sim,
         f_exp,
         H_40_exp,
+        x_exp_trend=f_exp,
+        x_sim_trend=f_sim,
+        y_exp_trend=np.polyval(coeff_exp, f_exp),
+        y_sim_trend=np.polyval(coeff_sim, f_sim),
         vline_x=f_cutoff,
         vline_label=r"Cut-off frequency $f_c$",
     )

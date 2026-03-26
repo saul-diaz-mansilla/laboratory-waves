@@ -51,13 +51,13 @@ def main():
     H_node_exp = df_results[f"H_Phase_{node}"].iloc[sim_index]
     k_exp = -np.unwrap(H_node_exp) / node
 
-    wrap_threshold = np.pi / node  # Half a wrap is a safe detection threshold
+    # wrap_threshold = np.pi / node  # Half a wrap is a safe detection threshold
 
-    for i in range(1, len(k_exp)):
-        if k_exp[i] < k_exp[i - 1] - wrap_threshold:
-            # A physical impossibility was detected.
-            # Add a full 2pi/node wrap to the rest of the array to undo the unwrap error.
-            k_exp[i:] += (2 * np.pi) / node
+    # for i in range(1, len(k_exp)):
+    #     if k_exp[i] < k_exp[i - 1] - wrap_threshold:
+    #         # A physical impossibility was detected.
+    #         # Add a full 2pi/node wrap to the rest of the array to undo the unwrap error.
+    #         k_exp[i:] += (2 * np.pi) / node
 
     # Find simulated data
     df_results = io.load_parquet_data(sim_dir, prefix="results_")
