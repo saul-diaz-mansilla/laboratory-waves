@@ -49,14 +49,15 @@ def main():
     sim_index = 0
     H_40_exp = df_results["H_Mag_40"].iloc[sim_index]
     coeff_exp = np.polyfit(f_exp, H_40_exp, 1)
+    m_exp = coeff_exp[0]
 
     # Find simulated data
-    df_results = io.load_parquet_data(sim_dir, prefix="results_")
-    df_axes = io.load_parquet_data(sim_dir, prefix="freqs_")
+    df_results_sim = io.load_parquet_data(sim_dir, prefix="results_")
+    df_axes_sim = io.load_parquet_data(sim_dir, prefix="freqs_")
 
-    f_sim = df_axes["freqs_global"].iloc[0]
+    f_sim = df_axes_sim["freqs_global"].iloc[0]
 
-    H_40_sim = df_results["H_Mag_40"].iloc[sim_index]
+    H_40_sim = df_results_sim["H_Mag_40"].iloc[sim_index]
     coeff_sim = np.polyfit(f_sim, H_40_sim, 1)
 
     # Plotting logic
@@ -77,7 +78,31 @@ def main():
     vis.axes_transfer_function(ax1)
 
     plt.tight_layout()
-    plt.savefig("figures/07_trend_comparison.png")
+    plt.savefig("figures/07_trend_comparison_1.png")
+
+    # Calculate slopes for all simulations
+    m_sims = []
+    for H_40_sim_i in df_results_sim["H_Mag_40"]:
+        coeff_sim_i = np.polyfit(f_sim, H_40_sim_i, 1)
+        m_sims.append(coeff_sim_i[0])
+
+    # Histogram of simulated slopes
+    _, ax2 = plt.subplots(**vis.apply_standard_style(1, 1))
+    ax2.hist(
+        m_sims,
+        bins=30,
+        alpha=0.7,
+        color="blue",
+        edgecolor="black",
+        label="Simulated slopes",
+    )
+    ax2.axvline(m_exp, color="black", linewidth=3, label="Experimental slope")
+    ax2.set_xlabel("Slope")
+    ax2.set_ylabel("Count")
+    ax2.legend()
+
+    plt.tight_layout()
+    plt.savefig("figures/07_trend_comparison_2.png")
 
 
 if __name__ == "__main__":

@@ -51,14 +51,10 @@ def main():
     H_node_exp = df_results[f"H_Phase_{node}"].iloc[sim_index]
     k_exp = -np.unwrap(H_node_exp) / node
 
-    # ! PHASE UNWRAPPING CURRENTLY MALFUNCTIONING
-    # wrap_threshold = np.pi / node  # Half a wrap is a safe detection threshold
-
-    # for i in range(1, len(k_exp)):
-    #     if k_exp[i] < k_exp[i - 1] - wrap_threshold:
-    #         # A physical impossibility was detected.
-    #         # Add a full 2pi/node wrap to the rest of the array to undo the unwrap error.
-    #         k_exp[i:] += (2 * np.pi) / node
+    # Avoid unwrapping errors as the dispersion relation is strictly increasing
+    for i in range(1, len(k_exp)):
+        if k_exp[i] < k_exp[i - 1]:
+            k_exp[i:] += (2 * np.pi) / node
 
     # Find simulated data
     df_results = io.load_parquet_data(sim_dir, prefix="results_")
@@ -68,6 +64,11 @@ def main():
 
     H_node_sim = df_results[f"H_Phase_{node}"].iloc[sim_index]
     k_sim = -np.unwrap(H_node_sim) / node
+
+    # Avoid unwrapping errors as the dispersion relation is strictly increasing
+    for i in range(1, len(k_sim)):
+        if k_sim[i] < k_sim[i - 1]:
+            k_sim[i:] += (2 * np.pi) / node
 
     # Plotting logic
     _, ax1 = plt.subplots(**vis.apply_standard_style(1, 1))

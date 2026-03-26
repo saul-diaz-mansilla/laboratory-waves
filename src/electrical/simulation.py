@@ -2,12 +2,186 @@ import numpy as np
 import os
 import sys
 import time
+import concurrent.futures
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 import src.electrical.solver as solver
 import src.electrical.signals as signals
 import src.utils.io as io
+
+
+global_sim_args = None
+
+
+def init_worker(shared_args):
+    global global_sim_args
+    global_sim_args = shared_args
+
+
+def run_single_simulation(sim_num):
+    global global_sim_args
+    sim_args = global_sim_args
+
+    # Create a unique random generator for this process worker
+    rng = np.random.default_rng((int(time.time() * 1000) + sim_num) % (2**32 - 1))
+
+    power_rule_0 = sim_args["power_rule_0"]
+    dpower_rule = sim_args["dpower_rule"]
+    R_in_0 = sim_args["R_in_0"]
+    dR_in = sim_args["dR_in"]
+    R_out_0 = sim_args["R_out_0"]
+    R_out_tol = sim_args["R_out_tol"]
+    noise_min = sim_args["noise_min"]
+    noise_max = sim_args["noise_max"]
+    temp_drift = sim_args["temp_drift"]
+    L_batch_max = sim_args["L_batch_max"]
+    C_batch_max = sim_args["C_batch_max"]
+    R_L_ratio = sim_args["R_L_ratio"]
+    f_test = sim_args["f_test"]
+    C_end = sim_args["C_end"]
+    dC_end = sim_args["dC_end"]
+    C_0 = sim_args["C_0"]
+    dC = sim_args["dC"]
+    N = sim_args["N"]
+    L_0 = sim_args["L_0"]
+    dL = sim_args["dL"]
+    R_L_0 = sim_args["R_L_0"]
+    dR_L = sim_args["dR_L"]
+    frequencies = sim_args["frequencies"]
+    match_impedance = sim_args["match_impedance"]
+    waveform = sim_args["waveform"]
+    t_eval_points = sim_args["t_eval_points"]
+    V_gen_all_freqs = sim_args["V_gen_all_freqs"]
+    target_nodes = sim_args["target_nodes"]
+    output_mode = sim_args["output_mode"]
+
+    # Domain Randomization Parameters
+    power_rule = rng.normal(power_rule_0, dpower_rule)
+    R_in = rng.normal(R_in_0, dR_in)
+    R_out_mult = rng.normal(1.0, R_out_tol)
+    noise_std = rng.uniform(noise_min, noise_max)
+    global_temp_drift = rng.uniform(1.0 - temp_drift, 1.0 + temp_drift)
+    L_batch_factor = rng.uniform(1.0, L_batch_max)
+    C_batch_factor = rng.uniform(1.0, C_batch_max)
+
+    k_power = (R_L_ratio - 1) / f_test**power_rule_0
+
+    C = np.concatenate(
+        (
+            [rng.normal(C_end, dC_end / C_batch_factor)],
+            rng.normal(C_0, dC / C_batch_factor, N - 2),
+            [rng.normal(C_end, dC_end / C_batch_factor)],
+        )
+    )
+    C *= global_temp_drift
+
+    L = rng.normal(L_0, dL / L_batch_factor, N - 1)
+    R_L = rng.normal(R_L_0, dR_L, N - 1)
+
+    omega_c = 2.0 / np.sqrt(L_0 * C_0)
+    total_states = 2 * N - 1
+
+    V_in_all_runs = []
+    V_out_nodes_all_runs = {node: [] for node in np.arange(1, 41)}
+
+    num_freqs = len(frequencies)
+    R_out_array = np.zeros(num_freqs)
+    R_L_AC_array = np.zeros((num_freqs, N - 1))
+
+    for f_idx, f_current in enumerate(frequencies):
+        omega = 2.0 * np.pi * f_current
+
+        if match_impedance:
+            if omega >= omega_c:
+                R_out = 1e6
+            else:
+                R_out = np.sqrt(L_0 / C_0) / np.sqrt(1 - (omega / omega_c) ** 2)
+        else:
+            R_out = R_out_0
+
+        R_out *= R_out_mult
+        R_out_array[f_idx] = R_out
+        R_L_AC_array[f_idx] = R_L * (1 + k_power * f_current**power_rule)
+
+    # Pre-allocate output array for the RK4 solver
+    Y0_array = np.zeros((num_freqs, total_states))
+    Y_out_buffer = np.zeros((num_freqs, total_states, len(t_eval_points)))
+
+    # In-place numerical integration across all frequencies
+    Y_all_freqs = solver.rk4_solve(
+        t_eval_points,
+        Y0_array,
+        C,
+        L,
+        R_L_AC_array,
+        R_in,
+        R_out_array,
+        V_gen_all_freqs,
+        Y_out_buffer,
+    )
+
+    for f_idx in range(num_freqs):
+        V_clean = Y_all_freqs[f_idx, :N, :]
+        V_noisy = V_clean + rng.normal(0, noise_std, V_clean.shape)
+
+        V_in_all_runs.append(V_noisy[0, :])
+        for node in V_out_nodes_all_runs.keys():
+            V_out_nodes_all_runs[node].append(V_noisy[node, :])
+
+    R_L_norm = R_L / R_L_0 if R_L_0 != 0 else np.zeros_like(R_L)
+    R_in_norm = R_in / R_in_0 if R_in_0 != 0 else np.zeros_like(R_in)
+
+    target_data = {
+        "C_norm": C / C_0,
+        "L_norm": np.pad(L / L_0, (0, 1), constant_values=0),
+        "R_L_norm": np.pad(R_L_norm, (0, 1), constant_values=0),
+        "power_rule": np.full(N, power_rule),
+        "R_in_norm": np.full(N, R_in_norm),
+        "R_out_mult": np.full(N, R_out_mult),
+        "noise_std_mV": np.full(N, noise_std / 1e-3),
+        "global_temp_drift": np.full(N, global_temp_drift),
+        "C_batch_factor": np.full(N, C_batch_factor),
+        "L_batch_factor": np.full(N, L_batch_factor),
+    }
+
+    result_data = {}
+    freqs_global = None
+
+    if output_mode == "transfer_function":
+        for node in target_nodes:
+            if waveform == "gaussian":
+                H, freqs_global = signals.H_gaussian(
+                    V_in_all_runs,
+                    V_out_nodes_all_runs[node],
+                    t_eval_points,
+                    frequencies,
+                    sim_args["sigma"],
+                )
+            elif waveform == "sine":
+                H, freqs_global = signals.H_sine(
+                    V_in_all_runs,
+                    V_out_nodes_all_runs[node],
+                    t_eval_points,
+                    frequencies,
+                )
+            elif waveform == "pulse":
+                H, freqs_global = signals.H_pulse(
+                    V_in_all_runs,
+                    V_out_nodes_all_runs[node],
+                    t_eval_points,
+                    sim_args["pulse_width"],
+                )
+
+            result_data[f"H_Mag_{node}"] = np.abs(H).tolist()
+            result_data[f"H_Phase_{node}"] = np.angle(H).tolist()
+
+    elif output_mode == "time_series":
+        result_data["V_0"] = V_in_all_runs
+        for node in target_nodes:
+            result_data[f"V_{node}"] = V_out_nodes_all_runs[node]
+
+    return target_data, result_data, freqs_global
 
 
 def simulate(config_path):
@@ -106,14 +280,14 @@ def simulate(config_path):
         sigma = exp_parameters["input"]["sigma"]
         amplitude = exp_parameters["input"]["amplitude"]
 
-        V_gen_all_freqs = {
-            frequency: (
+        V_gen_all_freqs = np.array(
+            [
                 amplitude
                 * np.exp(-((t_eval_points - t0) ** 2) / (2 * sigma**2))
                 * np.cos(2 * np.pi * frequency * t_eval_points)
-            )
-            for frequency in frequencies
-        }
+                for frequency in frequencies
+            ]
+        )
     elif waveform == "sine":
         f_start = exp_parameters["input"]["f_start"]
         f_end = exp_parameters["input"]["f_end"]
@@ -121,10 +295,12 @@ def simulate(config_path):
         frequencies = np.linspace(f_start, f_end, num_inputs)
         amplitude = exp_parameters["input"]["amplitude"]
 
-        V_gen_all_freqs = {
-            frequency: (amplitude * np.sin(2 * np.pi * frequency * t_eval_points))
-            for frequency in frequencies
-        }
+        V_gen_all_freqs = np.array(
+            [
+                amplitude * np.sin(2 * np.pi * frequency * t_eval_points)
+                for frequency in frequencies
+            ]
+        )
     elif waveform == "pulse":
         frequencies = np.array([0])
         pulse_width = exp_parameters["input"]["width"]
@@ -146,12 +322,50 @@ def simulate(config_path):
             t_eval_points[fall_section] - pulse_width
         )
 
-        V_gen_all_freqs = {frequency: V_pulse for frequency in frequencies}
+        V_gen_all_freqs = np.array([V_pulse for _ in frequencies])
 
     else:
         raise ValueError(
             f"Unknown waveform type: {waveform}. Must be 'gaussian', 'sine' or 'pulse'."
         )
+
+    # Bundle all arguments needed by the worker function
+    sim_args = {
+        "power_rule_0": power_rule_0,
+        "dpower_rule": dpower_rule,
+        "R_in_0": R_in_0,
+        "dR_in": dR_in,
+        "R_out_0": R_out_0,
+        "R_out_tol": R_out_tol,
+        "noise_min": noise_min,
+        "noise_max": noise_max,
+        "temp_drift": temp_drift,
+        "L_batch_max": L_batch_max,
+        "C_batch_max": C_batch_max,
+        "R_L_ratio": R_L_ratio,
+        "f_test": f_test,
+        "C_end": C_end,
+        "dC_end": dC_end,
+        "C_0": C_0,
+        "dC": dC,
+        "N": N,
+        "L_0": L_0,
+        "dL": dL,
+        "R_L_0": R_L_0,
+        "dR_L": dR_L,
+        "frequencies": frequencies,
+        "match_impedance": match_impedance,
+        "waveform": waveform,
+        "t_eval_points": t_eval_points,
+        "V_gen_all_freqs": V_gen_all_freqs,
+        "target_nodes": target_nodes,
+        "output_mode": output_mode,
+    }
+
+    if waveform == "gaussian":
+        sim_args["sigma"] = sigma
+    elif waveform == "pulse":
+        sim_args["pulse_width"] = pulse_width
 
     all_targets = {
         "C_norm": [],
@@ -175,134 +389,24 @@ def simulate(config_path):
         for node in target_nodes:
             all_results[f"V_{node}"] = []
 
-    time_start = time.time()
+    freqs_global_final = np.array([])
 
-    # * ------ START SIMULATION LOOP ------
-    for sim_num in range(num_simulations):
-        # Domain Randomization Parameters
-        power_rule = np.random.normal(power_rule_0, dpower_rule)
-        R_in = np.random.normal(R_in_0, dR_in)
-        R_out_mult = np.random.normal(1.0, R_out_tol)
-        noise_std = np.random.uniform(noise_min, noise_max)
-        global_temp_drift = np.random.uniform(1.0 - temp_drift, 1.0 + temp_drift)
-        L_batch_factor = np.random.uniform(1.0, L_batch_max)
-        C_batch_factor = np.random.uniform(1.0, C_batch_max)
-
-        k_power = (R_L_ratio - 1) / f_test**power_rule_0
-
-        # Build the Matrices (randomized)
-        C = np.concatenate(
-            (
-                [np.random.normal(C_end, dC_end / C_batch_factor)],
-                np.random.normal(C_0, dC / C_batch_factor, N - 2),
-                [np.random.normal(C_end, dC_end / C_batch_factor)],
-            )
+    with concurrent.futures.ProcessPoolExecutor(
+        initializer=init_worker, initargs=(sim_args,)
+    ) as executor:
+        results = executor.map(
+            run_single_simulation,
+            range(num_simulations),
+            chunksize=max(1, num_simulations // (os.cpu_count() or 16)),
         )
-        C *= global_temp_drift
 
-        L = np.random.normal(L_0, dL / L_batch_factor, N - 1)
-        R_L = np.random.normal(R_L_0, dR_L, N - 1)
+        for target_data, result_data, freqs_global_ret in results:
+            for key in all_targets:
+                all_targets[key].append(target_data[key])
+            for key in all_results:
+                all_results[key].append(result_data[key])
+            if freqs_global_ret is not None:
+                freqs_global_final = freqs_global_ret
 
-        # Calculate theoretical cutoff angular frequency based on nominal values
-        omega_c = 2.0 / np.sqrt(L_0 * C_0)
-
-        # Build First-Order V-I State-Space Matrices
-        total_states = 2 * N - 1
-
-        V_in_all_runs = []
-        V_out_nodes_all_runs = {node: [] for node in np.arange(1, 41)}
-
-        # * ------ START FREQUENCY LOOP ------
-        # Integrate 30 times (Dynamic Impedance Matching)
-        for f_current in frequencies:
-            omega = 2.0 * np.pi * f_current
-
-            if match_impedance:
-                # Calculate frequency-dependent matched impedance
-                if omega >= omega_c:
-                    # Prevent complex numbers/division by zero if approaching or exceeding cutoff
-                    R_out = 1e6
-                else:
-                    R_out = np.sqrt(L_0 / C_0) / np.sqrt(1 - (omega / omega_c) ** 2)
-            else:
-                R_out = R_out_0
-
-            R_out *= R_out_mult
-
-            # Update Inductor AC Losses
-            R_L_AC = R_L * (1 + k_power * f_current**power_rule)
-            Y0 = np.zeros(total_states)
-
-            V_gen = V_gen_all_freqs[f_current]
-
-            Y_all = solver.rk4_solve(
-                t_eval_points, Y0, C, L, R_L_AC, R_in, R_out, V_gen
-            )
-            V_clean = Y_all[:N, :]
-
-            V_noisy = V_clean + np.random.normal(0, noise_std, V_clean.shape)
-
-            V_in_all_runs.append(V_noisy[0, :])
-            for node in V_out_nodes_all_runs.keys():
-                V_out_nodes_all_runs[node].append(V_noisy[node, :])
-
-        # * ------ END FREQUENCY LOOP ------
-
-        # Save targets (L, C, and new ML parameters padded/broadcasted to length N)
-        R_L_norm = R_L / R_L_0 if R_L_0 != 0 else np.zeros_like(R_L)
-        R_in_norm = R_in / R_in_0 if R_in_0 != 0 else np.zeros_like(R_in)
-
-        all_targets["C_norm"].append(C / C_0)
-        all_targets["L_norm"].append(np.pad(L / L_0, (0, 1), constant_values=0))
-        all_targets["R_L_norm"].append(np.pad(R_L_norm, (0, 1), constant_values=0))
-        all_targets["power_rule"].append(np.full(N, power_rule))
-        all_targets["R_in_norm"].append(np.full(N, R_in_norm))
-        all_targets["R_out_mult"].append(np.full(N, R_out_mult))
-        all_targets["noise_std_mV"].append(np.full(N, noise_std / 1e-3))
-        all_targets["global_temp_drift"].append(np.full(N, global_temp_drift))
-        all_targets["C_batch_factor"].append(np.full(N, C_batch_factor))
-        all_targets["L_batch_factor"].append(np.full(N, L_batch_factor))
-
-        if output_mode == "transfer_function":
-            # Calculate Global Transfer Functions for Target Nodes
-            for node in target_nodes:
-                if waveform == "gaussian":
-                    H, freqs_global = signals.H_gaussian(
-                        V_in_all_runs,
-                        V_out_nodes_all_runs[node],
-                        t_eval_points,
-                        frequencies,
-                        sigma,
-                    )
-                elif waveform == "sine":
-                    H, freqs_global = signals.H_sine(
-                        V_in_all_runs,
-                        V_out_nodes_all_runs[node],
-                        t_eval_points,
-                        frequencies,
-                    )
-                elif waveform == "pulse":
-                    H, freqs_global = signals.H_pulse(
-                        V_in_all_runs,
-                        V_out_nodes_all_runs[node],
-                        t_eval_points,
-                        pulse_width,
-                    )
-
-                all_results[f"H_Mag_{node}"].append(np.abs(H).tolist())
-                all_results[f"H_Phase_{node}"].append(np.angle(H).tolist())
-
-        elif output_mode == "time_series":
-            all_results["V_0"].append(V_in_all_runs)
-            for node in target_nodes:
-                all_results[f"V_{node}"].append(V_out_nodes_all_runs[node])
-
-        if sim_num == 0:
-            print(
-                f"Estimated total time: {(time.time() - time_start) * num_simulations / 3600} hours"
-            )
-        if sim_num % 100 == 0:
-            print(f"Elapsed time: {time.time() - time_start} seconds")
-    # * ------ END SIMULATION LOOP ------
-    all_freqs = {"freqs_global": [freqs_global.tolist()]}
+    all_freqs = {"freqs_global": [freqs_global_final.tolist()]}
     return all_targets, all_results, all_freqs
