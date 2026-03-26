@@ -1,15 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-import os
-import sys
 import scipy.optimize as opt
 import scipy.interpolate as interp
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
-import src.utils.landaubeta as lb
-
-lb.use_latex_fonts()
 
 # Length of RL circuits & transmission line
 l_t = 38  # sections
@@ -25,16 +19,16 @@ dC = 0.1 * C
 w_c = 2 / np.sqrt(L * C)
 
 # Manual data
-path = "data/electrical/task_2_6.xlsx"
+path = "archive/tasks/data/task_2_6_res.xlsx"
 df = pd.read_excel(path, header=None, engine="openpyxl")
 
-n = df.iloc[2:35, 0].to_numpy()
-in_out = df.iloc[2:35, 1].to_numpy()
-f_m = df.iloc[2:35, 4].to_numpy()
-v0_m = df.iloc[2:35, 5].to_numpy()
-dv0_m = df.iloc[2:35, 6].to_numpy()
-v38_m = df.iloc[2:35, 7].to_numpy()
-dv38_m = df.iloc[2:35, 8].to_numpy()
+n = df.iloc[2:33, 0].to_numpy()
+in_out = df.iloc[2:33, 1].to_numpy()
+f_m = df.iloc[2:33, 4].to_numpy()
+v0_m = df.iloc[2:33, 5].to_numpy()
+dv0_m = df.iloc[2:33, 6].to_numpy()
+v38_m = df.iloc[2:33, 7].to_numpy()
+dv38_m = df.iloc[2:33, 8].to_numpy()
 
 w_m = 2 * np.pi * f_m
 v0_m = v0_m / 2
@@ -61,7 +55,7 @@ dvmax_in = []
 phase_diffs = []
 
 for i in range(len(n)):
-    file_path = "data/electrical/task_2_6/" + f"AMPPUL{i:02d}.CSV"
+    file_path = "data/raw/sine_matched/" + f"AMPPUL{i:02d}.CSV"
     data = pd.read_csv(file_path)
     t = data.iloc[:, 0].to_numpy()
     v_0 = data.iloc[:, 1].to_numpy()
@@ -114,7 +108,6 @@ plt.errorbar(w * 1e-3 / 2 / np.pi, ratio, yerr=d_ratio, fmt=".", label="Experime
 plt.xlabel(r"$f$ (kHz)")
 plt.ylabel(r"$V_{38}/V_{0}$")
 plt.legend()
-plt.savefig(fig_dir + "ratio.pdf")
 
 plt.figure()
 plt.errorbar(
@@ -148,7 +141,6 @@ plt.plot(
 plt.xlabel(r"k (sections$^{-1}$)")
 plt.ylabel(r"$f$ (kHz)")
 plt.legend()
-plt.savefig(fig_dir + "dispersion.pdf")
 
 sort_idx = np.argsort(k)
 k_sort = k[sort_idx]
@@ -172,7 +164,6 @@ plt.plot(
 plt.xlabel(r"$f$ (kHz)")
 plt.ylabel(r"Velocity (sections/ms)")
 plt.legend()
-plt.savefig(fig_dir + "velocities.pdf")
 
 plt.figure()
 plt.errorbar(w * 1e-3 / 2 / np.pi, vmax_in, yerr=dvmax_in, fmt=".", label=r"$v_{in}$")
@@ -181,5 +172,4 @@ plt.errorbar(w * 1e-3 / 2 / np.pi, vmax_38, yerr=dvmax_38, fmt=".", label=r"$v_{
 plt.xlabel(r"$f$ (kHz)")
 plt.ylabel("Amplitude (V)")
 plt.legend()
-plt.savefig(fig_dir + "amplitudes.pdf")
 plt.show()

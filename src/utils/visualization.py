@@ -52,6 +52,8 @@ def plot_style(
     dy_exp=None,
     vline_x=None,
     vline_label=None,
+    hline_y=None,
+    hline_label=None,
 ):
     """
     Plots simulation vs experimental transfer functions on a given axis
@@ -72,6 +74,8 @@ def plot_style(
     - y_exp_trend: experimental trend y values
     - vline_x: x value for vertical line
     - vline_label: label for vertical line
+    - hline_y: y value for horizontal line
+    - hline_label: label for horizontal line
     """
     if (x_sim is None or y_sim is None) and (x_exp is None or y_exp is None):
         raise ValueError(
@@ -110,10 +114,15 @@ def plot_style(
         )
         handles.append(exp_trend_line)
 
-    # Plot Cut-off Frequency
+    # Plot vertical line
     if vline_x is not None:
         vline = ax.axvline(x=vline_x, color="k", linestyle="--", label=vline_label)
         handles.append(vline)
+
+    # Plot horizontal line
+    if hline_y is not None:
+        hline = ax.axhline(y=hline_y, color="k", linestyle="--", label=hline_label)
+        handles.append(hline)
 
     # Extract strictly ordered handles and labels
     labels = [h.get_label() for h in handles]
@@ -133,3 +142,16 @@ def axes_transfer_function(ax, x_lim=None, y_lim=None):
         ax.set_ylim(y_lim)
     else:
         ax.set_ylim(0, 1.2)
+
+
+def axes_dispersion_relation(ax, x_lim=None, y_lim=None):
+    """
+    Sets axes labels and limits for transfer function plots
+    """
+    # Apply Consistent Formatting
+    ax.set_xlabel(r"Wavenumber [sections$^{-1}$]")
+    ax.set_ylabel("Frequency [kHz]")
+    if x_lim:
+        ax.set_xlim(x_lim)
+    if y_lim:
+        ax.set_ylim(y_lim)

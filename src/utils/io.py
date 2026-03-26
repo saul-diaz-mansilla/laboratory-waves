@@ -1,7 +1,9 @@
 import yaml
 import pandas as pd
 import os
+import numpy as np
 import glob
+from pathlib import Path
 
 
 def load_config(file_path):
@@ -16,6 +18,27 @@ def load_config(file_path):
     """
     with open(file_path, "r") as file:
         return yaml.safe_load(file)
+
+
+def get_processed_filename(raw_filename):
+    """
+    Converts a raw filename (e.g., 'AMPPUL00.CSV') to its processed parquet filename
+    (e.g., 'AMPPUL00.parquet').
+
+    This function can handle a single filename string or a NumPy array of filenames.
+
+    Inputs:
+        raw_filename (str or np.ndarray): The original filename(s), potentially with a .csv extension.
+
+    Outputs:
+        str or np.ndarray: The processed filename(s) with a .parquet extension.
+                           Returns a string if input was a string, and a NumPy array if input was an array.
+    """
+    if isinstance(raw_filename, np.ndarray):
+        # Apply the transformation to each element in the array
+        return np.vectorize(lambda x: Path(x).stem + ".parquet")(raw_filename)
+    else:
+        return Path(raw_filename).stem + ".parquet"
 
 
 def save_parquet(data, output_dir, prefix):

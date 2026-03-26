@@ -1,17 +1,18 @@
-# Config for gaussian_matched
+# Config for gaussian_unmatched
 
 # Paths to configs and data
 paths:
   circuit_config: "configs/circuit/default.yaml"
-  simulation_config: "configs/simulation/training_10k.yaml"
+  simulation_config: "configs/simulation/testing_1.yaml"
 
   # Experimental data files and directories
-  raw_dir: "data/raw/gaussian_matched"
-  processed_dir: "data/processed/gaussian_matched"
-  metadata: "data/metadata/gaussian_matched.csv"
+
+  raw_dir: "data/raw/gaussian_unmatched"
+  processed_dir: "data/processed/gaussian_unmatched"
+  metadata: "data/metadata/gaussian_unmatched.csv"
 
   # Output for simulations
-  simulation_dir: "data/simulated/gaussian_matched"
+  simulation_dir: "data/simulated/gaussian_unmatched_testing"
 
 # Simulation parameters for input signal
 input:
@@ -19,7 +20,7 @@ input:
   waveform: "gaussian"
 
   # Match impedance of mean frequency
-  match_impedance: True
+  match_impedance: False
 
   # Number of wavepackets
   num_inputs: 30

@@ -1,17 +1,17 @@
-# Config for sine_unmatched
+# Config for sine_matchedS
 
 # Paths to configs and data
 paths:
   circuit_config: "configs/circuit/default.yaml"
-  simulation_config: "configs/simulation/nn_training.yaml"
+  simulation_config: "configs/simulation/trend_1k.yaml"
 
   # Experimental data files and directories
-  raw_dir: "data/raw/sine_unmatched"
-  processed_dir: "data/processed/sine_unmatched"
-  metadata: "data/metadata/sine_unmatched.csv"
+  raw_dir: "data/raw/sine_matched"
+  processed_dir: "data/processed/sine_matched"
+  metadata: "data/metadata/sine_matched.csv"
 
   # Output for simulations
-  simulation_dir: "data/simulated/sine_unmatched"
+  simulation_dir: "data/simulated/sine_matched"
 
 # Simulation parameters for input signal
 input:

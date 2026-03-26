@@ -24,7 +24,9 @@ def remove_sine_offset(data):
     Removes the DC offset of a sine or other periodic function by fitting to a sine plus a
     constant and removing the constant.
     """
-    popt, _ = curve_fit(fit_sine, np.arange(len(data)), data, p0=[np.max(data), 1, 0])
+    popt, _ = curve_fit(
+        fit_sine, np.arange(len(data)), data, p0=[np.max(data), 1, 0, np.mean(data)]
+    )
     return data - popt[3]
 
 
@@ -107,14 +109,25 @@ def H_sine(V_in_data, V_out_data, t_array, freqs):
     """
 
     H_sine = []
+
+    # Isolate the steady-state portion to ignore initial propagation delay
+    half_idx = len(t_array) // 2
+
     for v_in, v_out, freq in zip(V_in_data, V_out_data, freqs):
         # Fit data to sine curves
-        popt_in, _ = curve_fit(fit_sine, t_array, v_in, p0=[np.max(v_in), freq, 0])
-        popt_out, _ = curve_fit(fit_sine, t_array, v_out, p0=[np.max(v_out), freq, 0])
+        popt_in, _ = curve_fit(
+            fit_sine, t_array[half_idx:], v_in[half_idx:], p0=[np.max(v_in), freq, 0, 0]
+        )
+        popt_out, _ = curve_fit(
+            fit_sine,
+            t_array[half_idx:],
+            v_out[half_idx:],
+            p0=[np.max(v_out), freq, 0, 0],
+        )
 
         # Extract amplitude & phase info
-        A_in, _, phi_in = popt_in
-        A_out, _, phi_out = popt_out
+        A_in, _, phi_in, _ = popt_in
+        A_out, _, phi_out, _ = popt_out
 
         if A_in < 0:
             A_in = -A_in

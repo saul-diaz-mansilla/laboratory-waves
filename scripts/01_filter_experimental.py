@@ -27,17 +27,31 @@ def main():
     exp_parameters = io.load_config(config_path)
     input_path = exp_parameters["paths"]["raw_dir"]
     output_path = exp_parameters["paths"]["processed_dir"]
+    metadata_path = exp_parameters["paths"]["metadata"]
+    circuit_path = exp_parameters["paths"]["circuit_config"]
+
+    circuit_parameters = io.load_config(circuit_path)
+    df_metadata = pd.read_csv(metadata_path)
+
     waveform = exp_parameters["input"]["waveform"]
+
+    f_cutoff = (
+        1
+        / np.sqrt(circuit_parameters["L"]["value"] * circuit_parameters["C"]["value"])
+        / np.pi
+    )
 
     if not os.path.exists(output_path):
         os.makedirs(output_path)
 
-    all_exp_files = list(Path(input_path).glob("*.csv"))
+    all_exp_files = df_metadata[
+        "filename"
+    ].to_numpy()  # Contains raw filenames like 'AMPPUL00.CSV'
 
     for file_path in all_exp_files:
-        file_name = file_path.stem
+        file_name = Path(file_path).stem
+        data = pd.read_csv(Path(input_path) / file_path)
 
-        data = pd.read_csv(file_path)
         t = data.iloc[:, 0].to_numpy()
         v_0 = data.iloc[:, 1].to_numpy()
         v_node = data.iloc[:, 2].to_numpy()
@@ -45,7 +59,7 @@ def main():
 
         dt = t[1] - t[0]
         fs = 1 / dt
-        sos = signal.butter(4, 500000, "lowpass", fs=fs, output="sos")
+        sos = signal.butter(4, 4 * f_cutoff, "lowpass", fs=fs, output="sos")
         v_0 = signal.sosfiltfilt(sos, v_0)
         v_node = signal.sosfiltfilt(sos, v_node)
 

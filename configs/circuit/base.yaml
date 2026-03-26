@@ -1,29 +1,28 @@
 # LC transmission line parameters
-# Values extracted from technical sheet (see sources)
-# Includes inductor resistances but no frequency scaling
+# Base model with no tolerances, or inductor resistances
 
 L:  # Inductance for all inductors
     value: 0.00033   # H
-    tolerance: 0.000066    # H
+    tolerance: 0    # H
 
 C:  # Capacitance for capacitors 1-39
     value: 0.000000015    # F
-    tolerance: 0.0000000015   # F
+    tolerance: 0   # F
 
 C_end:  # Total apacitance for capacitors 0 & 40
     value: 0.0000000075   # F
-    tolerance: 0.00000000075  # F
+    tolerance: 0  # F
 
 R_in:  # Resistance for initial resistor and oscilloscope
     value: 150  # Ohm
-    tolerance: 7.5  # Ohm
+    tolerance: 0  # Ohm
 
 R_out:  # Resistance for variable termination resistor when fixed
     value: 148  # Ohm
-    tolerance: 0.05 # 5%
+    tolerance: 0 # 5%
 
 R_L:    # DC internal resistance for all inductors
-    value: 0.730  # Ohm
+    value: 0  # Ohm
     tolerance: 0  # Ohm
 
 f_test: # Test frequency for quality factor
@@ -34,8 +33,8 @@ Q_test: # Quality factor at test frequenct f_test
     value: 65
     tolerance: 1
 
-R_L_test: # Inductor resistance at test frequency f_test (does not scale)
-    value: 0.730  # Ohm
+R_L_test: # Inductor resistance at test frequency f_test
+    value: 0  # Ohm
 
 N:  # Number of nodes in the system (includes node 0)
     value: 41

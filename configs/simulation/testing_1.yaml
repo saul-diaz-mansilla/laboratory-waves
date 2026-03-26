@@ -1,0 +1,29 @@
+# Simulation parameters
+# Used for transfer function generation for neural network analysis
+
+# Execution configuration
+execution:
+  # Number of simulations
+  num_simulations: 1
+
+  # Number of points of integration
+  num_points: 10000
+
+  # Target nodes (where data is extracted from)
+  target_nodes: [4, 8, 12, 16, 20, 24, 28, 32, 36, 40]
+
+  # Simulation outputs H(f) directly
+  output_mode: "transfer_function"
+
+# Domain randomization parameters
+randomization:
+  # Noise floor
+  noise_min: 0.0005 # V
+  noise_max: 0.002 # V
+
+  # Thermal capacitance drift
+  temp_drift: 0.02  # 2%
+
+  # Tolerance reduction due to batches (divide tolerance by factor)
+  L_batch_max: 5.0
+  C_batch_max: 5.0

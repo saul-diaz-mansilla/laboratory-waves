@@ -1,6 +1,7 @@
 import numpy as np
 import os
 import sys
+import time
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
@@ -69,7 +70,12 @@ def simulate(config_path):
     # Resistance ratio at 796 kHz from quality factor
     f_test = circuit_parameters["f_test"]["value"]
     R_L_test = circuit_parameters["R_L_test"]["value"]
-    R_L_ratio = R_L_test / R_L_0
+
+    # Handle ideal case
+    if R_L_0 != 0:
+        R_L_ratio = R_L_test / R_L_0
+    else:
+        R_L_ratio = 1
 
     # Model R_AC = R_DC * (1 + k_power * f**power_rule)
     power_rule_0 = circuit_parameters["power_rule"]["value"]
@@ -169,6 +175,8 @@ def simulate(config_path):
         for node in target_nodes:
             all_results[f"V_{node}"] = []
 
+    time_start = time.time()
+
     # * ------ START SIMULATION LOOP ------
     for sim_num in range(num_simulations):
         # Domain Randomization Parameters
@@ -213,7 +221,6 @@ def simulate(config_path):
         A[i + 1, N + i] = 1 / C[i + 1]
         A[N + i, i] = 1 / L[i]
         A[N + i, i + 1] = -1 / L[i]
-        A[N + i, N + i] = -R_L[i] / L[i]
 
         V_in_all_runs = []
         V_out_nodes_all_runs = {node: [] for node in np.arange(1, 41)}
@@ -258,11 +265,14 @@ def simulate(config_path):
         # * ------ END FREQUENCY LOOP ------
 
         # Save targets (L, C, and new ML parameters padded/broadcasted to length N)
+        R_L_norm = R_L / R_L_0 if R_L_0 != 0 else np.zeros_like(R_L)
+        R_in_norm = R_in / R_in_0 if R_in_0 != 0 else np.zeros_like(R_in)
+
         all_targets["C_norm"].append(C / C_0)
         all_targets["L_norm"].append(np.pad(L / L_0, (0, 1), constant_values=0))
-        all_targets["R_L_norm"].append(np.pad(R_L / R_L_0, (0, 1), constant_values=0))
+        all_targets["R_L_norm"].append(np.pad(R_L_norm, (0, 1), constant_values=0))
         all_targets["power_rule"].append(np.full(N, power_rule))
-        all_targets["R_in_norm"].append(np.full(N, R_in / R_in_0))
+        all_targets["R_in_norm"].append(np.full(N, R_in_norm))
         all_targets["R_out_mult"].append(np.full(N, R_out_mult))
         all_targets["noise_std_mV"].append(np.full(N, noise_std / 1e-3))
         all_targets["global_temp_drift"].append(np.full(N, global_temp_drift))
@@ -298,12 +308,17 @@ def simulate(config_path):
                 all_results[f"H_Mag_{node}"].append(np.abs(H).tolist())
                 all_results[f"H_Phase_{node}"].append(np.angle(H).tolist())
 
-        # TODO: Update time series output
         elif output_mode == "time_series":
             all_results["V_0"].append(V_in_all_runs)
             for node in target_nodes:
                 all_results[f"V_{node}"].append(V_out_nodes_all_runs[node])
 
+        if sim_num == 0:
+            print(
+                f"Estimated total time: {(time_start - time.time()) * num_simulations}"
+            )
+        if sim_num % 100 == 0:
+            print(f"Elapsed time: {time.time() - time_start}")
     # * ------ END SIMULATION LOOP ------
     all_freqs = {"freqs_global": [freqs_global.tolist()]}
     return all_targets, all_results, all_freqs

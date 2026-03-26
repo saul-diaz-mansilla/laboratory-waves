@@ -3,7 +3,7 @@
 # Paths to configs and data
 paths:
   circuit_config: "configs/circuit/default.yaml"
-  simulation_config: "configs/simulation/nn_training.yaml"
+  simulation_config: "configs/simulation/training_10k.yaml"
 
   # Experimental data files and directories
 
