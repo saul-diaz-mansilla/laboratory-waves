@@ -27,3 +27,26 @@ randomization:
   # Tolerance reduction due to batches (divide tolerance by factor)
   L_batch_max: 5.0
   C_batch_max: 5.0
+
+# Inverse-problem neural network (used by training / inference scripts)
+neural_network:
+  training:
+    batch_size: 64
+    epochs: 50
+    learning_rate: 0.001
+    train_split: 0.8
+    seed: 0
+    grad_clip_norm_1d: 1.0
+    lr_scheduler_1d_factor: 0.5
+    lr_scheduler_1d_patience: 3
+  loss:
+    noise_floor_threshold: 1.0e-4
+    priority_factor: 5.0
+  architecture:
+    num_freq_bins: 160
+    adaptive_pool_height: 5
+    adaptive_pool_width: 10
+    conv_channels: [32, 64, 128]
+    dropout: 0.3
+    regressor_hidden1: 1024
+    regressor_hidden2: 512
