@@ -13,9 +13,7 @@ paths:
   # Output for simulations
   simulation_dir: "data/simulated/gaussian_matched_testing"
 
-  inverse_model_2d: "data/inverse_problem/models/transmission_line_2dcnn.pth"
-  inverse_model_2d_magnitude: "data/inverse_problem/models/transmission_line_2dcnn_mag.pth"
-  inverse_model_1d: "data/inverse_problem/models/transmission_line_1dcnn_node40.pth"
+  model: "models/gaussian_matched_testing.pth"
 
 # Simulation parameters for input signal
 input:

@@ -56,9 +56,8 @@ def main():
 
     paths = master_cfg["paths"]
     processed_dir = paths["processed_dir"]
-    ckpt_2d = paths["inverse_model_2d"]
-    ckpt_2d_mag = paths["inverse_model_2d_magnitude"]
-    ckpt_1d = paths["inverse_model_1d"]
+    model_type = nn_cfg.get("model_type", "2d")
+    ckpt = paths["model"]
 
     df_results = io.load_parquet_data(processed_dir, prefix="results_")
     df_freqs = io.load_parquet_data(processed_dir, prefix="freqs_")
@@ -72,12 +71,15 @@ def main():
 
     runs = []
 
-    # --- 2D mag + phase ---
-    if os.path.isfile(ckpt_2d):
+    if not os.path.isfile(ckpt):
+        raise FileNotFoundError(f"Checkpoint not found: {ckpt}")
+
+    if model_type == "2d":
+        # --- 2D mag + phase ---
         model = build_model_from_config(
             "2d", num_nodes, num_freq_bins, num_outputs, arch_cfg
         ).to(device)
-        model.load_state_dict(torch.load(ckpt_2d, map_location=device))
+        model.load_state_dict(torch.load(ckpt, map_location=device))
         model.eval()
         inp = np.zeros((1, 2 * num_nodes, num_freq_bins), dtype=np.float32)
         for i, node in enumerate(target_nodes):
@@ -105,12 +107,12 @@ def main():
         L_c = (pred[n_circ : 2 * n_circ] * L_0)[: n_circ - 1]
         runs.append(("2d", C_c, L_c))
 
-    # --- 2D magnitude-only ---
-    if os.path.isfile(ckpt_2d_mag):
+    elif model_type == "2d_magnitude":
+        # --- 2D magnitude-only ---
         model = build_model_from_config(
             "2d_magnitude", num_nodes, num_freq_bins, num_outputs, arch_cfg
         ).to(device)
-        model.load_state_dict(torch.load(ckpt_2d_mag, map_location=device))
+        model.load_state_dict(torch.load(ckpt, map_location=device))
         model.eval()
         inp = np.zeros((1, num_nodes, num_freq_bins), dtype=np.float32)
         for i, node in enumerate(target_nodes):
@@ -129,12 +131,12 @@ def main():
         L_c = (pred[n_circ : 2 * n_circ] * L_0)[: n_circ - 1]
         runs.append(("2d_magnitude", C_c, L_c))
 
-    # --- 1D ---
-    if os.path.isfile(ckpt_1d):
+    elif model_type == "1d":
+        # --- 1D ---
         model = build_model_from_config(
             "1d", num_nodes, num_freq_bins, num_outputs, arch_cfg
         ).to(device)
-        model.load_state_dict(torch.load(ckpt_1d, map_location=device))
+        model.load_state_dict(torch.load(ckpt, map_location=device))
         model.eval()
         H_mag = np.asarray(df_results.iloc[0][f"H_Mag_{node_1d}"])[sort_idx_exp]
         H_phase = np.asarray(df_results.iloc[0][f"H_Phase_{node_1d}"])[sort_idx_exp]
@@ -157,9 +159,12 @@ def main():
         L_c = (pred[n_circ : 2 * n_circ] * L_0)[: n_circ - 1]
         runs.append(("1d", C_c, L_c))
 
+    else:
+        raise ValueError(f"Unknown model_type: {model_type}")
+
     if not runs:
         raise FileNotFoundError(
-            f"No checkpoints found. Expected at least one of: {ckpt_2d}, {ckpt_2d_mag}, {ckpt_1d}"
+            f"No checkpoints found. Expected checkpoint at: {ckpt}"
         )
 
     key_mag = f"H_Mag_{node_1d}"

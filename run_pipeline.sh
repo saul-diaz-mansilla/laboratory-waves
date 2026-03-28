@@ -25,5 +25,8 @@ python scripts/04_base_model_comparison.py --config configs/experiment/sine_matc
 python scripts/05_dispersion_relation.py --config configs/experiment/sine_matched_testing.yaml
 python scripts/06_scaling_comparison.py --config1 configs/experiment/gaussian_matched_noscaling.yaml --config2 configs/experiment/gaussian_matched_testing.yaml
 python scripts/07_trend_comparison.py --config configs/experiment/gaussian_matched.yaml
+
+echo "Phase 4: Train nn and infer data"
+
 python scripts/08_train_model.py --config configs/experiment/gaussian_matched.yaml
 python scripts/09_infer_parameters.py --config configs/experiment/gaussian_matched.yaml

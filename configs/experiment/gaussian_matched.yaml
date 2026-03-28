@@ -14,9 +14,7 @@ paths:
   simulation_dir: "data/simulated/gaussian_matched"
 
   # Trained inverse-problem model checkpoints (scripts 08 / 09)
-  inverse_model_2d: "data/inverse_problem/models/transmission_line_2dcnn.pth"
-  inverse_model_2d_magnitude: "data/inverse_problem/models/transmission_line_2dcnn_mag.pth"
-  inverse_model_1d: "data/inverse_problem/models/transmission_line_1dcnn_node40.pth"
+  model: "models/gaussian_matched.pth"
 
 # Simulation parameters for input signal
 input:

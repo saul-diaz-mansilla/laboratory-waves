@@ -30,6 +30,7 @@ randomization:
 
 # Inverse-problem neural network (used by training / inference scripts)
 neural_network:
+  model_type: "2d"
   training:
     batch_size: 64
     epochs: 50

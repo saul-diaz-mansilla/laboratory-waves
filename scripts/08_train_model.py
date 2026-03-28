@@ -53,9 +53,10 @@ def main():
 
     paths = master_cfg["paths"]
     data_dir = paths["simulation_dir"]
-    out_2d = paths["inverse_model_2d"]
-    out_2d_mag = paths["inverse_model_2d_magnitude"]
-    out_1d = paths["inverse_model_1d"]
+    
+    # Read model type and specific checkpoint path from config
+    model_type = nn_cfg.get("model_type", "2d")
+    out_model = paths["model"]
 
     seed = train_cfg["seed"]
     np.random.seed(seed)
@@ -86,150 +87,154 @@ def main():
         val_dataset, batch_size=batch_size, shuffle=False, num_workers=0
     )
 
-    # --- 2D (magnitude + phase) ---
-    model_2d = build_model_from_config(
-        "2d", num_nodes, num_freq_bins, num_outputs, arch_cfg
-    ).to(device)
-    criterion_2d = ObservabilityWeightedMSE(
-        noise_floor_threshold=loss_cfg["noise_floor_threshold"],
-        priority_factor=loss_cfg["priority_factor"],
-        config_path=args.config,
-        magnitude_only=False,
-    )
-    optimizer_2d = optim.Adam(model_2d.parameters(), lr=lr)
+    if model_type == "2d":
+        # --- 2D (magnitude + phase) ---
+        model_2d = build_model_from_config(
+            "2d", num_nodes, num_freq_bins, num_outputs, arch_cfg
+        ).to(device)
+        criterion_2d = ObservabilityWeightedMSE(
+            noise_floor_threshold=loss_cfg["noise_floor_threshold"],
+            priority_factor=loss_cfg["priority_factor"],
+            config_path=args.config,
+            magnitude_only=False,
+        )
+        optimizer_2d = optim.Adam(model_2d.parameters(), lr=lr)
 
-    def _train_epoch_2d():
-        model_2d.train()
-        running = 0.0
-        for inputs, targets in train_loader:
-            inputs, targets = inputs.to(device), targets.to(device)
-            optimizer_2d.zero_grad()
-            loss = criterion_2d(model_2d(inputs), targets, inputs)
-            loss.backward()
-            optimizer_2d.step()
-            running += loss.item() * inputs.size(0)
-        return running / len(train_loader.dataset)
-
-    def _val_2d():
-        model_2d.eval()
-        running = 0.0
-        with torch.no_grad():
-            for inputs, targets in val_loader:
+        def _train_epoch_2d():
+            model_2d.train()
+            running = 0.0
+            for inputs, targets in train_loader:
                 inputs, targets = inputs.to(device), targets.to(device)
+                optimizer_2d.zero_grad()
                 loss = criterion_2d(model_2d(inputs), targets, inputs)
+                loss.backward()
+                optimizer_2d.step()
                 running += loss.item() * inputs.size(0)
-        return running / len(val_loader.dataset)
+            return running / len(train_loader.dataset)
 
-    print("Starting 2D (mag + phase) training...")
-    for epoch in range(epochs):
-        tr = _train_epoch_2d()
-        va = _val_2d()
-        print(f"[2D] Epoch [{epoch + 1}/{epochs}] | Train {tr:.6f} | Val {va:.6f}")
+        def _val_2d():
+            model_2d.eval()
+            running = 0.0
+            with torch.no_grad():
+                for inputs, targets in val_loader:
+                    inputs, targets = inputs.to(device), targets.to(device)
+                    loss = criterion_2d(model_2d(inputs), targets, inputs)
+                    running += loss.item() * inputs.size(0)
+            return running / len(val_loader.dataset)
 
-    os.makedirs(os.path.dirname(out_2d), exist_ok=True)
-    torch.save(model_2d.state_dict(), out_2d)
-    print(f"Saved 2D model to: {out_2d}")
+        print("Starting 2D (mag + phase) training...")
+        for epoch in range(epochs):
+            tr = _train_epoch_2d()
+            va = _val_2d()
+            print(f"[2D] Epoch [{epoch + 1}/{epochs}] | Train {tr:.6f} | Val {va:.6f}")
 
-    # --- 2D magnitude-only ---
-    model_mag = build_model_from_config(
-        "2d_magnitude", num_nodes, num_freq_bins, num_outputs, arch_cfg
-    ).to(device)
-    criterion_mag = ObservabilityWeightedMSE(
-        noise_floor_threshold=loss_cfg["noise_floor_threshold"],
-        priority_factor=loss_cfg["priority_factor"],
-        config_path=args.config,
-        magnitude_only=True,
-    )
-    optimizer_mag = optim.Adam(model_mag.parameters(), lr=lr)
+        os.makedirs(os.path.dirname(out_model), exist_ok=True)
+        torch.save(model_2d.state_dict(), out_model)
+        print(f"Saved 2D model to: {out_model}")
 
-    def _train_epoch_mag():
-        model_mag.train()
-        running = 0.0
-        for inputs, targets in train_loader:
-            mag = inputs[:, 0::2, :].to(device)
-            targets = targets.to(device)
-            optimizer_mag.zero_grad()
-            loss = criterion_mag(model_mag(mag), targets, mag)
-            loss.backward()
-            optimizer_mag.step()
-            running += loss.item() * mag.size(0)
-        return running / len(train_loader.dataset)
+    elif model_type == "2d_magnitude":
+        # --- 2D magnitude-only ---
+        model_mag = build_model_from_config(
+            "2d_magnitude", num_nodes, num_freq_bins, num_outputs, arch_cfg
+        ).to(device)
+        criterion_mag = ObservabilityWeightedMSE(
+            noise_floor_threshold=loss_cfg["noise_floor_threshold"],
+            priority_factor=loss_cfg["priority_factor"],
+            config_path=args.config,
+            magnitude_only=True,
+        )
+        optimizer_mag = optim.Adam(model_mag.parameters(), lr=lr)
 
-    def _val_mag():
-        model_mag.eval()
-        running = 0.0
-        with torch.no_grad():
-            for inputs, targets in val_loader:
+        def _train_epoch_mag():
+            model_mag.train()
+            running = 0.0
+            for inputs, targets in train_loader:
                 mag = inputs[:, 0::2, :].to(device)
                 targets = targets.to(device)
+                optimizer_mag.zero_grad()
                 loss = criterion_mag(model_mag(mag), targets, mag)
+                loss.backward()
+                optimizer_mag.step()
                 running += loss.item() * mag.size(0)
-        return running / len(val_loader.dataset)
+            return running / len(train_loader.dataset)
 
-    print("Starting 2D (magnitude-only) training...")
-    for epoch in range(epochs):
-        tr = _train_epoch_mag()
-        va = _val_mag()
-        print(f"[2D-mag] Epoch [{epoch + 1}/{epochs}] | Train {tr:.6f} | Val {va:.6f}")
+        def _val_mag():
+            model_mag.eval()
+            running = 0.0
+            with torch.no_grad():
+                for inputs, targets in val_loader:
+                    mag = inputs[:, 0::2, :].to(device)
+                    targets = targets.to(device)
+                    loss = criterion_mag(model_mag(mag), targets, mag)
+                    running += loss.item() * mag.size(0)
+            return running / len(val_loader.dataset)
 
-    os.makedirs(os.path.dirname(out_2d_mag), exist_ok=True)
-    torch.save(model_mag.state_dict(), out_2d_mag)
-    print(f"Saved 2D magnitude-only model to: {out_2d_mag}")
+        print("Starting 2D (magnitude-only) training...")
+        for epoch in range(epochs):
+            tr = _train_epoch_mag()
+            va = _val_mag()
+            print(f"[2D-mag] Epoch [{epoch + 1}/{epochs}] | Train {tr:.6f} | Val {va:.6f}")
 
-    # --- 1D on last target node ---
-    node_1d = target_nodes[-1]
-    node_idx = target_nodes.index(node_1d)
-    ch_start = 2 * node_idx
-    ch_end = ch_start + 2
+        os.makedirs(os.path.dirname(out_model), exist_ok=True)
+        torch.save(model_mag.state_dict(), out_model)
+        print(f"Saved 2D magnitude-only model to: {out_model}")
 
-    model_1d = build_model_from_config(
-        "1d", num_nodes, num_freq_bins, num_outputs, arch_cfg
-    ).to(device)
-    criterion_1d = nn.MSELoss()
-    optimizer_1d = optim.Adam(model_1d.parameters(), lr=lr)
-    scheduler_1d = optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer_1d, mode="min", factor=sch_factor, patience=sch_patience
-    )
+    elif model_type == "1d":
+        # --- 1D on last target node ---
+        node_1d = target_nodes[-1]
+        node_idx = target_nodes.index(node_1d)
+        ch_start = 2 * node_idx
+        ch_end = ch_start + 2
 
-    def _train_epoch_1d():
-        model_1d.train()
-        running = 0.0
-        for inputs, targets in train_loader:
-            x = inputs[:, ch_start:ch_end, :].to(device)
-            targets = targets.to(device)
-            optimizer_1d.zero_grad()
-            loss = criterion_1d(model_1d(x), targets)
-            loss.backward()
-            torch.nn.utils.clip_grad_norm_(model_1d.parameters(), max_norm=grad_clip)
-            optimizer_1d.step()
-            running += loss.item() * x.size(0)
-        return running / len(train_loader.dataset)
-
-    def _val_1d():
-        model_1d.eval()
-        running = 0.0
-        with torch.no_grad():
-            for inputs, targets in val_loader:
-                x = inputs[:, ch_start:ch_end, :].to(device)
-                targets = targets.to(device)
-                loss = criterion_1d(model_1d(x), targets)
-                running += loss.item() * x.size(0)
-        return running / len(val_loader.dataset)
-
-    print(f"Starting 1D training (node {node_1d})...")
-    for epoch in range(epochs):
-        tr = _train_epoch_1d()
-        va = _val_1d()
-        scheduler_1d.step(va)
-        lr_cur = optimizer_1d.param_groups[0]["lr"]
-        print(
-            f"[1D] Epoch [{epoch + 1}/{epochs}] | Train {tr:.6f} | Val {va:.6f} | LR {lr_cur}"
+        model_1d = build_model_from_config(
+            "1d", num_nodes, num_freq_bins, num_outputs, arch_cfg
+        ).to(device)
+        criterion_1d = nn.MSELoss()
+        optimizer_1d = optim.Adam(model_1d.parameters(), lr=lr)
+        scheduler_1d = optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer_1d, mode="min", factor=sch_factor, patience=sch_patience
         )
 
-    os.makedirs(os.path.dirname(out_1d), exist_ok=True)
-    torch.save(model_1d.state_dict(), out_1d)
-    print(f"Saved 1D model to: {out_1d}")
+        def _train_epoch_1d():
+            model_1d.train()
+            running = 0.0
+            for inputs, targets in train_loader:
+                x = inputs[:, ch_start:ch_end, :].to(device)
+                targets = targets.to(device)
+                optimizer_1d.zero_grad()
+                loss = criterion_1d(model_1d(x), targets)
+                loss.backward()
+                torch.nn.utils.clip_grad_norm_(model_1d.parameters(), max_norm=grad_clip)
+                optimizer_1d.step()
+                running += loss.item() * x.size(0)
+            return running / len(train_loader.dataset)
 
+        def _val_1d():
+            model_1d.eval()
+            running = 0.0
+            with torch.no_grad():
+                for inputs, targets in val_loader:
+                    x = inputs[:, ch_start:ch_end, :].to(device)
+                    targets = targets.to(device)
+                    loss = criterion_1d(model_1d(x), targets)
+                    running += loss.item() * x.size(0)
+            return running / len(val_loader.dataset)
+
+        print(f"Starting 1D training (node {node_1d})...")
+        for epoch in range(epochs):
+            tr = _train_epoch_1d()
+            va = _val_1d()
+            scheduler_1d.step(va)
+            lr_cur = optimizer_1d.param_groups[0]["lr"]
+            print(
+                f"[1D] Epoch [{epoch + 1}/{epochs}] | Train {tr:.6f} | Val {va:.6f} | LR {lr_cur}"
+            )
+
+        os.makedirs(os.path.dirname(out_model), exist_ok=True)
+        torch.save(model_1d.state_dict(), out_model)
+        print(f"Saved 1D model to: {out_model}")
+    else:
+        raise ValueError(f"Unknown model_type: {model_type}")
 
 if __name__ == "__main__":
     main()
