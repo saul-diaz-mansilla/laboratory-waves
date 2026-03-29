@@ -7,8 +7,8 @@ import pandas as pd
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import src.electrical.signals as signals
-import src.utils.io as io
+import src.simulation.transfer_functions as signals
+import src.utils.data_io as io
 
 
 def main():

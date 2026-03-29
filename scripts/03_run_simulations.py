@@ -4,8 +4,8 @@ import argparse
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.electrical.simulation import simulate
-import src.utils.io as io
+from src.simulation.monte_carlo import simulate
+import src.utils.data_io as io
 
 
 def main():

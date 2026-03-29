@@ -6,7 +6,7 @@ import numpy as np
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import src.utils.io as io
+import src.utils.data_io as io
 import src.utils.visualization as vis
 
 

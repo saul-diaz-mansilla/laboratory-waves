@@ -30,3 +30,4 @@ echo "Phase 4: Train nn and infer data"
 
 python scripts/08_train_model.py --config configs/experiment/gaussian_matched.yaml
 python scripts/09_infer_parameters.py --config configs/experiment/gaussian_matched.yaml
+python scripts/10_infer_simulated.py --config configs/experiment/gaussian_matched.yaml

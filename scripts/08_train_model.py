@@ -10,10 +10,10 @@ from torch.utils.data import DataLoader, random_split
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.inverse_problem.dataset import TransmissionLineDataset
-from src.inverse_problem.models import build_model_from_config
-from src.inverse_problem.losses import ObservabilityWeightedMSE
-import src.utils.io as io
+from src.inference.dataset import TransmissionLineDataset
+from src.inference.models import build_model_from_config
+from src.inference.losses import ObservabilityWeightedMSE
+import src.utils.data_io as io
 
 
 def _load_merged_nn_config(master_config_path):

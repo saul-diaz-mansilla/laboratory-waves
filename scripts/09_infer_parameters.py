@@ -9,9 +9,9 @@ from scipy.interpolate import interp1d
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import src.utils.io as io
-from src.electrical.simulation import simulate
-from src.inverse_problem.models import build_model_from_config
+import src.utils.data_io as io
+from src.simulation.monte_carlo import simulate
+from src.inference.models import build_model_from_config
 from src.utils import visualization as vis
 
 
@@ -83,8 +83,17 @@ def main():
         model.eval()
         inp = np.zeros((1, 2 * num_nodes, num_freq_bins), dtype=np.float32)
         for i, node in enumerate(target_nodes):
-            H_mag = np.asarray(df_results.iloc[0][f"H_Mag_{node}"])[sort_idx_exp]
-            H_phase = np.asarray(df_results.iloc[0][f"H_Phase_{node}"])[sort_idx_exp]
+            key_mag = f"H_Mag_{node}"
+            key_phase = f"H_Phase_{node}"
+            
+            if key_mag in df_results.columns and key_phase in df_results.columns:
+                H_mag = np.asarray(df_results.iloc[0][key_mag])[sort_idx_exp]
+                H_phase = np.asarray(df_results.iloc[0][key_phase])[sort_idx_exp]
+            else:
+                print(f"Warning: Node {node} data missing from experimental results. Padding with 0.")
+                H_mag = np.zeros_like(freqs_exp)
+                H_phase = np.zeros_like(freqs_exp)
+                
             fm = interp1d(
                 freqs_exp,
                 H_mag,
@@ -116,7 +125,14 @@ def main():
         model.eval()
         inp = np.zeros((1, num_nodes, num_freq_bins), dtype=np.float32)
         for i, node in enumerate(target_nodes):
-            H_mag = np.asarray(df_results.iloc[0][f"H_Mag_{node}"])[sort_idx_exp]
+            key_mag = f"H_Mag_{node}"
+            
+            if key_mag in df_results.columns:
+                H_mag = np.asarray(df_results.iloc[0][key_mag])[sort_idx_exp]
+            else:
+                print(f"Warning: Node {node} mag data missing. Padding with 0.")
+                H_mag = np.zeros_like(freqs_exp)
+                
             fm = interp1d(
                 freqs_exp,
                 H_mag,
@@ -185,14 +201,14 @@ def main():
         H_sim_mag = H_sim_mag[idx_sort]
 
         safe = tag.replace("/", "_")
-        out_plot = f"figures/inference_validation_{safe}.png"
+        out_plot = f"figures/09_infer_parameters_{safe}.png"
         os.makedirs(os.path.dirname(out_plot), exist_ok=True)
 
         _, ax1 = plt.subplots(**vis.apply_standard_style(1, 1))
 
         vis.plot_style(ax1, freqs_sim, H_sim_mag, freqs_exp, H_exp_mag)
 
-        vis.axes_transfer_function()
+        vis.axes_transfer_function(ax1)
         plt.savefig(out_plot)
         print(f"Validation plot saved to: {out_plot}")
 
