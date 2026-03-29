@@ -5,7 +5,7 @@
 
 ## Abstract
 
-This project focuses on the study of a discrete, finite $LC$ transmission line, a physical system consisting of a coupled chain of inductors ($L$) and capacitors ($C$). While theoretical models often treat such lines as ideal, physical implementations suffer from deviations such as parasitic resistances, component manufacturing tolerances, and frequency-dependent AC losses that dramatically alter dispersion characteristics. 
+This project focuses on the study of a discrete, finite $LC$ transmission line, a physical system consisting of a coupled chain of inductors ($L$) and capacitors ($C$). While theoretical models often treat such lines as ideal, physical implementations suffer from deviations, mainly the high manufacturing tolerances on L and C, which break down filter behavior of the line and introduce complex resonances into the system.
 
 To address this, we developed a fast forward model using an RK4 ODE solver that simulates wave propagation across the entire line, taking into account these parasitic effects. Using large-scale Monte Carlo simulations of the line under varied input signals (Gaussians, sines, pulses), we train Convolutional Neural Networks (CNNs) to solve the **inverse problem**: taking observed, noisy transfer signals as input and regressing the exact underlying distribution of $L$ and $C$ components, accurately characterizing the real physical system.
 
