@@ -1,0 +1,17 @@
+# Config for sine_matched testing lower bound
+paths:
+  circuit_config: "configs/circuit/lower_bound.yaml"
+  simulation_config: "configs/simulation/testing_1.yaml"
+  raw_dir: "data/raw/sine_matched"
+  processed_dir: "data/processed/sine_matched"
+  metadata: "data/metadata/sine_matched.csv"
+  simulation_dir: "data/simulated/sine_matched_lower"
+  model: "models/sine_matched_lower.pth"
+input:
+  waveform: "sine"
+  match_impedance: False
+  num_inputs: 50
+  duration: 0.002
+  amplitude: 2.5
+  f_start: 2000
+  f_end: 140000

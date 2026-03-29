@@ -60,8 +60,16 @@ def main():
     H_40_sim = df_results_sim["H_Mag_40"].iloc[sim_index]
     coeff_sim = np.polyfit(f_sim, H_40_sim, 1)
 
-    # Plotting logic
-    _, ax1 = plt.subplots(**vis.apply_standard_style(1, 1))
+    # Calculate slopes for all simulations
+    m_sims = []
+    for H_40_sim_i in df_results_sim["H_Mag_40"]:
+        coeff_sim_i = np.polyfit(f_sim, H_40_sim_i, 1)
+        m_sims.append(coeff_sim_i[0])
+
+    # Combined figure with two horizontal subplots
+    fig, (ax1, ax2) = plt.subplots(**vis.apply_standard_style(1, 2))
+
+    # Left panel: transfer function with trends
     vis.plot_style(
         ax1,
         f_sim,
@@ -77,17 +85,7 @@ def main():
     )
     vis.axes_transfer_function(ax1)
 
-    plt.tight_layout()
-    plt.savefig("figures/07_trend_comparison_1.png")
-
-    # Calculate slopes for all simulations
-    m_sims = []
-    for H_40_sim_i in df_results_sim["H_Mag_40"]:
-        coeff_sim_i = np.polyfit(f_sim, H_40_sim_i, 1)
-        m_sims.append(coeff_sim_i[0])
-
-    # Histogram of simulated slopes
-    _, ax2 = plt.subplots(**vis.apply_standard_style(1, 1))
+    # Right panel: histogram of simulated slopes
     ax2.hist(
         m_sims,
         bins=30,
@@ -102,7 +100,7 @@ def main():
     ax2.legend()
 
     plt.tight_layout()
-    plt.savefig("figures/07_trend_comparison_2.png")
+    plt.savefig("figures/07_trend_comparison.png")
 
 
 if __name__ == "__main__":

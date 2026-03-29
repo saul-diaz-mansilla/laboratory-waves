@@ -48,6 +48,7 @@ def plot_style(
     y_sim_trend=None,
     x_exp_trend=None,
     y_exp_trend=None,
+    dx_sim=None,
     dy_sim=None,
     dy_exp=None,
     vline_x=None,
@@ -64,7 +65,8 @@ def plot_style(
     - ax: matplotlib ax of the subplot
     - x_sim: simulated x values
     - y_sim: simulated y values
-    - dy_sim: optional errorbars for simulated data
+    - dx_sim: optional errorbars for simulated data along x
+    - dy_sim: optional errorbars for simulated data along y
     - x_exp: experimental x values
     - y_exp: experimental y values
     - dy_exp: optional errorbars for experimental data
@@ -85,12 +87,18 @@ def plot_style(
     handles = []
 
     # Plot Simulation (Always Blue)
-    if dy_sim is not None:
-        sim_line = ax.errorbar(x_sim, y_sim, yerr=dy_sim, fmt="bo-", label="Simulation")
-        handles.append(sim_line)
-    elif x_sim is not None and y_sim is not None:
+    if x_sim is not None and y_sim is not None:
         (sim_line,) = ax.plot(x_sim, y_sim, "bo-", label="Simulation")
         handles.append(sim_line)
+        import numpy as np
+        if dy_sim is not None:
+            y_s = np.asarray(y_sim)
+            dy_s = np.asarray(dy_sim)
+            ax.fill_between(x_sim, y_s - dy_s, y_s + dy_s, color="blue", alpha=0.3)
+        if dx_sim is not None:
+            x_s = np.asarray(x_sim)
+            dx_s = np.asarray(dx_sim)
+            ax.fill_betweenx(y_sim, x_s - dx_s, x_s + dx_s, color="blue", alpha=0.3)
 
     # Plot Experimental (Always Red)
     if dy_exp is not None:

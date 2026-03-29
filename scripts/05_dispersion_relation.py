@@ -22,9 +22,23 @@ def main():
         required=True,
         help="Path to the master experimental configuration file. Located in configs/experiment",
     )
+    parser.add_argument(
+        "--lower",
+        type=str,
+        required=True,
+        help="Path to the lower bound experiment config",
+    )
+    parser.add_argument(
+        "--upper",
+        type=str,
+        required=True,
+        help="Path to the upper bound experiment config",
+    )
 
     args = parser.parse_args()
     config_path = args.config
+    lower_path = args.lower
+    upper_path = args.upper
 
     exp_parameters = io.load_config(config_path)
 
@@ -70,6 +84,28 @@ def main():
         if k_sim[i] < k_sim[i - 1]:
             k_sim[i:] += (2 * np.pi) / node
 
+    # Find lower bound
+    lower_parameters = io.load_config(lower_path)
+    lower_dir = lower_parameters["paths"]["simulation_dir"]
+    df_results_lower = io.load_parquet_data(lower_dir, prefix="results_")
+    H_node_lower = df_results_lower[f"H_Phase_{node}"].iloc[sim_index]
+    k_sim_lower = -np.unwrap(H_node_lower) / node
+    for i in range(1, len(k_sim_lower)):
+        if k_sim_lower[i] < k_sim_lower[i - 1]:
+            k_sim_lower[i:] += (2 * np.pi) / node
+
+    # Find upper bound
+    upper_parameters = io.load_config(upper_path)
+    upper_dir = upper_parameters["paths"]["simulation_dir"]
+    df_results_upper = io.load_parquet_data(upper_dir, prefix="results_")
+    H_node_upper = df_results_upper[f"H_Phase_{node}"].iloc[sim_index]
+    k_sim_upper = -np.unwrap(H_node_upper) / node
+    for i in range(1, len(k_sim_upper)):
+        if k_sim_upper[i] < k_sim_upper[i - 1]:
+            k_sim_upper[i:] += (2 * np.pi) / node
+
+    dx_sim = np.abs(k_sim_upper - k_sim_lower) / 2
+
     # Plotting logic
     _, ax1 = plt.subplots(**vis.apply_standard_style(1, 1))
     vis.plot_style(
@@ -78,6 +114,7 @@ def main():
         f_sim,
         k_exp,
         f_exp,
+        dx_sim=dx_sim,
         hline_y=f_cutoff,
         hline_label=r"Cut-off frequency $f_c$",
     )

@@ -53,6 +53,7 @@ def main():
     num_outputs = 2 * n_circ
     C_0 = circuit_parameters["C"]["value"]
     L_0 = circuit_parameters["L"]["value"]
+    f_cutoff = 1 / np.sqrt(L_0 * C_0) / np.pi
 
     paths = master_cfg["paths"]
     processed_dir = paths["processed_dir"]
@@ -206,7 +207,15 @@ def main():
 
         _, ax1 = plt.subplots(**vis.apply_standard_style(1, 1))
 
-        vis.plot_style(ax1, freqs_sim, H_sim_mag, freqs_exp, H_exp_mag)
+        vis.plot_style(
+            ax1, 
+            freqs_sim, 
+            H_sim_mag, 
+            freqs_exp, 
+            H_exp_mag,
+            vline_x=f_cutoff,
+            vline_label=r"Cut-off frequency $f_c$",
+        )
 
         vis.axes_transfer_function(ax1)
         plt.savefig(out_plot)
