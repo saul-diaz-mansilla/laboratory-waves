@@ -44,17 +44,27 @@ To address this, we developed a fast forward model using an RK4 ODE solver that 
 The discrete $LC$ transmission line consists of $N$ cascaded stages. Taking parasitic resistive elements into account, the transient behavior of the circuit is governed by the following state-space differential equations, linking nodal voltages $V_i$ and branch currents $I_i$:
 
 - **Input Node (0):**
-  $$ C_0 \frac{dV_0}{dt} = \frac{V_{\text{in}} - V_0}{R_{\text{in}}} - I_0 $$
+  ```math
+  C_0 \frac{dV_0}{dt} = \frac{V_{\text{in}} - V_0}{R_{\text{in}}} - I_0
+  ```
 - **Intermediate Nodes ($1 \le i \le N-2$):**
-  $$ C_i \frac{dV_i}{dt} = I_{i-1} - I_i $$
+  ```math
+  C_i \frac{dV_i}{dt} = I_{i-1} - I_i
+  ```
 - **Final Output Node ($N-1$):**
-  $$ C_{N-1} \frac{dV_{N-1}}{dt} = I_{N-2} - \frac{V_{N-1}}{R_{\text{out}}} $$
+  ```math
+  C_{N-1} \frac{dV_{N-1}}{dt} = I_{N-2} - \frac{V_{N-1}}{R_{\text{out}}}
+  ```
 - **Inductive Branches ($0 \le i \le N-2$):**
-  $$ L_i \frac{dI_i}{dt} = V_i - V_{i+1} - R_{L,\text{AC}}(f) \, I_i $$
+  ```math
+  L_i \frac{dI_i}{dt} = V_i - V_{i+1} - R_{L,\text{AC}}(f) \, I_i
+  ```
 
 **Frequency-Dependent AC Losses:**
 A critical factor in modeling real transmission lines is that the parasitic series resistance $R_L$ is not constant. Due to high-frequency skin and proximity effects, it scales dynamically. We model this behavior using a power-rule:
-$$ R_{L, \text{AC}}(f) = R_{L, \text{DC}} \left(1 + k f^p\right) $$
+```math
+R_{L, \text{AC}}(f) = R_{L, \text{DC}} \left(1 + k f^p\right)
+```
 where $p$ is an experimentally fitted exponent and $f$ is the excitation frequency.
 
 ## Repository Architecture
