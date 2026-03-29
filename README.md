@@ -28,9 +28,16 @@ To address this, we developed a fast forward model using an RK4 ODE solver that 
    
    *Note: The trained neural network models are automatically downloaded from GitHub as they are already included in the repository.*
    
-   If you prefer to generate the data yourself, you may run the following script (warning: lengthy process):
+   If you prefer to generate the data yourself, you may run the following scripts (warning: lengthy processes):
+
+   To run the simulations:
    ```bash
    ./cached_sims.sh
+   ```
+
+   To train the neural network models:
+   ```bash
+   ./train_models.sh
    ```
 
 4. **Run the pipeline:**
@@ -86,7 +93,7 @@ L_i \frac{dI_i}{dt} = V_i - V_{i+1} - R_{L,\text{AC}}(f) \, I_i
 
 ### Deviations from Ideal Behavior
 
-In physical implementations, components deviate from ideal characteristics. High manufacturing tolerances in local $L$ and $C$ values cause each segment of the line to exhibit a slightly different characteristic impedance. This continuous mismatch across sections breaks down the smooth low-pass filter behavior, triggering localized reflections that manifest as standing waves and intricate resonances throughout the line's frequency response.
+In physical implementations, components deviate from ideal characteristics. **High manufacturing tolerances** in local $L$ and $C$ values cause each segment of the line to exhibit a slightly different characteristic impedance. This continuous mismatch across sections **breaks down the smooth low-pass filter behavior**, triggering localized reflections that manifest as standing waves and intricate resonances throughout the line's frequency response. This is the **most important effect** to account for when modelling the transmission line.
 
 Another critical factor is frequency-dependent AC losses. The parasitic series resistance $R_L$ of the inductors is not constant, it scales dynamically. We model this scaling using a power-rule:
 ```math
@@ -150,10 +157,17 @@ All data discussion is located in notebooks/results_analysis.ipynb.
 ## References
 
 [1] Richard P. Feynman, Robert B. Leighton, and Matthew Sands. The Feynman Lectures on Physics, Vol. II: The Electromagnetic Field. Addison-Wesley, 1964.
+
 [2] John R. Taylor. Classical Mechanics. University Science Books, 2005. See Chapter 16 for the Wave Equation in Continuous Media.
+
 [3] Mark Newman. Computational Physics. CreateSpace Independent Publishing Platform, 2013. Includes numerical solutions for the heat and wave equations.
+
 [4] Thornton, S. T. and Marion, J. (2019). Classical dynamics of particles and systems, pages 498–507. MTM.
+
 [5] Bourns. SRR7045 Series - Shielded SMD Power Inductors, 2013. Rev. 02/13.
+
 [6] Charles Baynham and Richard Hobson. 2nd Year Lab - Thermal and Electrical Waves Experiment Script. Blackett Laboratory, Physics Department, Imperial College London, 2025.
+
 [7] Paul Horowitz and Winfield Hill. The Art of Electronics. Cambridge University Press, Cambridge, 3rd edition, 2015. pp. 1109–1110.
+
 [8] Muhlethaler, J., Biela, J., Kolar, J. W., and Ecklebe, A. (2011). Improved core-loss calculation for magnetic components employed in power electronic systems. IEEE Transactions on Power electronics, 27(2):964–973.
