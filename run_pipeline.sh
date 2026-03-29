@@ -2,7 +2,7 @@
 
 set -e
 
-echo "Note: heavy simulations need to be downloaded or simulated."
+echo "Note: heavy simulations need to be downloaded or simulated and models trained."
 echo "Phase 1: Processing experimental data"
 python scripts/01_filter_experimental.py --config configs/experiment/gaussian_matched.yaml
 python scripts/02_extract_features.py --config configs/experiment/gaussian_matched.yaml
@@ -28,6 +28,5 @@ python scripts/07_trend_comparison.py --config configs/experiment/gaussian_match
 
 echo "Phase 4: Train nn and infer data"
 
-python scripts/08_train_model.py --config configs/experiment/gaussian_matched.yaml
 python scripts/09_infer_parameters.py --config configs/experiment/gaussian_matched.yaml
 python scripts/10_infer_simulated.py --config configs/experiment/gaussian_matched.yaml

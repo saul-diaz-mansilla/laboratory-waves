@@ -33,7 +33,7 @@ for i in range(len(frequencies)):
 
     # 2. Export to CSV for USB Upload
     # Most R&S instruments prefer a simple Time(s), Voltage(V) format.
-    file_name = f"data/electrical/gaussian_2/GEN_{i + 1}.csv"
+    file_name = f"archive/awg_config/data/GEN_{i + 1}.csv"
 
     try:
         # Create a DataFrame for clean formatting
