@@ -1,0 +1,36 @@
+# Config for pulse_single
+
+# Paths to configs and data
+paths:
+  circuit_config: "configs/circuit/default.yaml"
+  simulation_config: "configs/simulation/training_10k.yaml"
+
+  # Experimental data files and directories
+  raw_dir: "data/raw/pulse_single"
+  processed_dir: "data/processed/pulse_single"
+  metadata: "data/metadata/pulse_single.csv"
+
+  # Output for simulations
+  simulation_dir: "data/simulated/pulse_single"
+
+  model: "models/pulse_single.pth"
+
+# Simulation parameters for input signal
+input:
+  # Waveform to input
+  waveform: "pulse"
+
+  # Match impedance of mean frequency
+  match_impedance: False
+
+  # Signal duration
+  duration: 0.001 # s
+
+  # Trapezoidal rise and fall time
+  t_rise: 0.0000001 # s
+
+  # Pulse height
+  amplitude: 5  # V
+
+  # Pulse width
+  width: 0.00002 # s

@@ -1,0 +1,39 @@
+# Config for sine_matchedS
+
+# Paths to configs and data
+paths:
+  circuit_config: "configs/circuit/default.yaml"
+  simulation_config: "configs/simulation/testing_1.yaml"
+
+  # Experimental data files and directories
+  raw_dir: "data/raw/sine_matched"
+  processed_dir: "data/processed/sine_matched"
+  metadata: "data/metadata/sine_matched.csv"
+
+  # Output for simulations
+  simulation_dir: "data/simulated/sine_matched_testing"
+
+  model: "models/sine_matched_testing.pth"
+
+# Simulation parameters for input signal
+input:
+  # Waveform to input
+  waveform: "sine"
+
+  # Match impedance of mean frequency
+  match_impedance: False
+
+  # Number of sines
+  num_inputs: 50
+
+  # Signal duration
+  duration: 0.002 # s
+
+  # Amplitude of gaussian envelope
+  amplitude: 2.5  # V
+
+  # First frequency of wavepacket
+  f_start: 2000  # Hz
+
+  # Last frequency of wavepacket
+  f_end: 140000  # Hz

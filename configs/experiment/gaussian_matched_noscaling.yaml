@@ -1,0 +1,45 @@
+# Config for gaussian_matched_noscaling
+
+# Paths to configs and data
+paths:
+  circuit_config: "configs/circuit/default_noscaling.yaml"
+  simulation_config: "configs/simulation/testing_1.yaml"
+
+  # Experimental data files and directories
+  raw_dir: "data/raw/gaussian_matched"
+  processed_dir: "data/processed/gaussian_matched"
+  metadata: "data/metadata/gaussian_matched.csv"
+
+  # Output for simulations
+  simulation_dir: "data/simulated/gaussian_matched_noscaling"
+
+  model: "models/gaussian_matched_noscaling.pth"
+
+# Simulation parameters for input signal
+input:
+  # Waveform to input
+  waveform: "gaussian"
+
+  # Match impedance of mean frequency
+  match_impedance: True
+
+  # Number of wavepackets
+  num_inputs: 30
+
+  # Signal duration
+  duration: 0.002 # s
+
+  # Mean time of gaussian envelope
+  t0: 0.001  # s
+
+  # Standard deviation of gaussian envelope
+  sigma: 0.00002  # s
+
+  # Amplitude of gaussian envelope
+  amplitude: 2.5  # V
+
+  # First frequency of wavepacket
+  f_start: 20000  # Hz
+
+  # Last frequency of wavepacket
+  f_end: 140000  # Hz

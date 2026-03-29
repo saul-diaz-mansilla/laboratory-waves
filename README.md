@@ -1,21 +1,89 @@
-# laboratory-waves
-An experimental project mainly on electrical waves through a discrete LC transmission line. We studied the transmission line's deviations from the model and resonances, attempting to invert its signals to obtain back the experimental distribution of inductances L and capacitances C using a neural network.
+# Laboratory Waves: Inverse Problem on an LC Transmission Line
 
-See final presentation in "Modelling of Transmission Line through Monte Carlo Simulations.pptx" (no report).
+![Python](https://img.shields.io/badge/python-3.10%2B-blue)
+![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
 
-Install "requirements.txt" before running the source code (compatible with Python 3.10 and further versions).
+## Abstract
 
-Directories:
-- "src/": source code for the project.
-- "data/": experimental and simulation data
-- "figures/": images for main results of studied system
-- "latex/": contains sources and references. As there is no report, it just contains the bibliography.
-See READMEs inside the folders for more details.
+This project focuses on the study of a discrete, finite $LC$ transmission line—a physical system consisting of a coupled chain of inductors ($L$) and capacitors ($C$). While theoretical models often treat such lines as ideal, physical implementations suffer from deviations such as parasitic resistances, component manufacturing tolerances, and frequency-dependent AC losses (like the skin effect) that dramatically alter wave propagation, signal attenuation, and dispersion characteristics. 
 
-General outline of the project:
-- "electrical/": Study of several input signals in a coupled LC transmission line.
-- "inverse_problem/": Attempts to invert the signals from the transmission line to find the line's parameters.
-- "thermal/": Study of thermal waves in a brass cylinder. Secondary part of the project, unrelated to the previous ones.+
+To address this, we developed a fast forward model using an RK4 ODE solver that simulates wave propagation across the entire line, taking into account these parasitic effects. Using large-scale Monte Carlo simulations of the line under varied input signals (Gaussians, sines, pulses), we train Convolutional Neural Networks (CNNs) to solve the **inverse problem**: taking observed, noisy transfer signals as input and regressing the exact underlying distribution of $L$ and $C$ components, accurately characterizing the real physical system.
 
-Generating filtered data:
-- In directories "electrical/" and "inverse_problem/", the experimental data from the oscilloscope is passed through a Butterworth filter to remove high-frequency noise. Run "electrical/data_filter.py" to filter the desired raw data and save it.
+## Quick Start
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/saul-diaz-mansilla/laboratory-waves.git
+   cd laboratory-waves
+   ```
+
+2. **Install requirements:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. **Get the data:**
+   Because running millions of detailed RK4 simulations takes a long time, we strongly advise downloading the heavy, pre-computed simulation datasets from Google Drive:
+   - [Download Simulated Data Here](https://drive.google.com/drive/folders/1u-HSRnly0iDv49bZHjdgKWLGJ4ZRDhj4?usp=drive_link)
+   
+   *Note: The trained neural network models are automatically downloaded from GitHub as they are already included in the repository.*
+   
+   If you prefer to generate the data yourself, you may run the following script (warning: lengthy process):
+   ```bash
+   ./cached_sims.sh
+   ```
+
+4. **Run the pipeline:**
+   Once dependencies and data are ready, execute the entire pipeline:
+   ```bash
+   ./run_pipeline.sh
+   ```
+
+## Physical Background
+
+The discrete $LC$ transmission line consists of $N$ cascaded stages. Taking parasitic resistive elements into account, the transient behavior of the circuit is governed by the following state-space differential equations, linking nodal voltages $V_i$ and branch currents $I_i$:
+
+- **Input Node (0):**
+  $$ C_0 \frac{dV_0}{dt} = \frac{V_{\text{in}} - V_0}{R_{\text{in}}} - I_0 $$
+- **Intermediate Nodes ($1 \le i \le N-2$):**
+  $$ C_i \frac{dV_i}{dt} = I_{i-1} - I_i $$
+- **Final Output Node ($N-1$):**
+  $$ C_{N-1} \frac{dV_{N-1}}{dt} = I_{N-2} - \frac{V_{N-1}}{R_{\text{out}}} $$
+- **Inductive Branches ($0 \le i \le N-2$):**
+  $$ L_i \frac{dI_i}{dt} = V_i - V_{i+1} - R_{L,\text{AC}}(f) \, I_i $$
+
+**Frequency-Dependent AC Losses:**
+A critical factor in modeling real transmission lines is that the parasitic series resistance $R_L$ is not constant. Due to high-frequency skin and proximity effects, it scales dynamically. We model this behavior using a power-rule:
+$$ R_{L, \text{AC}}(f) = R_{L, \text{DC}} \left(1 + k f^p\right) $$
+where $p$ is an experimentally fitted exponent and $f$ is the excitation frequency.
+
+## Repository Architecture
+
+```text
+laboratory-waves/
+├── configs/          # YAML configuration files for different experiments and circuits
+├── data/             # Experimental (raw & processed) and generated simulation parquet files
+├── figures/          # Plots and visualizations generated by the scripts
+├── scripts/          # Numbered pipeline scripts (01 to 10) for filtering, simulation, training, and inference
+└── src/
+    ├── inference/    # PyTorch dataset definitions, customized MSE loss, and CNN architectures
+    ├── simulation/   # Physics models: Numba RK4 ODE solver, Monte Carlo dynamics, and signal processing
+    └── utils/        # Shared tools for IO (YAML/Parquet) and Matplotlib visualization standards
+```
+
+## Results Gallery
+
+<p align="center">
+  <img src="figures/06_scaling_comparison.png" width="90%" alt="Scaling Comparison" /><br>
+  <em>Comparison between experimental and simulated transfer functions, highlighting how incorporating frequency-dependent resistance corrects high-frequency dispersion and attenuation.</em>
+</p>
+
+<p align="center">
+  <img src="figures/05_dispersion_relation.png" width="60%" alt="Dispersion Relation" /><br>
+  <em>Experimental vs. Simulated dispersion relation of the discrete transmission line.</em>
+</p>
+
+<p align="center">
+  <img src="figures/10_infer_simulated_2d.png" width="60%" alt="Inference Validation" /><br>
+  <em>Transfer function predicted by physical parameters obtained through the 2D CNN inference model, compared against the target ground truth.</em>
+</p>

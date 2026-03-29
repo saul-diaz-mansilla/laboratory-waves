@@ -1,8 +1,9 @@
 matplotlib==3.10.8
-numba
+numba==0.64.0
 numpy==2.2.6
 pandas==2.3.3
 RsInstrument==1.124.0
 scipy==1.15.2
 --extra-index-url https://download.pytorch.org/whl/cpu
 torch==2.10.0+cpu
+pyyaml==6.0.3
