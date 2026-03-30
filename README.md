@@ -63,7 +63,7 @@ For frequency components below $f_c$, the line exhibits constant transmission ch
 
 Furthermore, the line possesses a characteristic impedance $Z_0$, dictating the relationship between voltage and current waves:
 ```math
-Z_0 = \sqrt{\frac{L}{C}}
+Z_0(f) = \sqrt{\frac{L/C}{1-(f/f_c)^2}}
 ```
 To ensure perfect wave propagation and effectively behave as an infinite line, the system must be properly matched by connecting a termination resistor $R_{\text{out}} = Z_0$ at its boundary. This eliminates any backward reflections and resulting standing waves.
 
