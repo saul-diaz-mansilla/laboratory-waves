@@ -23,7 +23,7 @@ To address this, we developed a fast forward model using an RK4 ODE solver that 
    ```
 
 3. **Get the data:**
-   Because running millions of detailed RK4 simulations takes a long time, we strongly advise downloading the heavy, pre-computed simulation datasets from Google Drive:
+   Because running tens of thousands of detailed RK4 simulations takes a long time, we strongly advise downloading the heavy, pre-computed simulation datasets from Google Drive. Place them in data/simulated/:
    - [Download Simulated Data Here](https://drive.google.com/drive/folders/1u-HSRnly0iDv49bZHjdgKWLGJ4ZRDhj4?usp=drive_link)
    
    *Note: The trained neural network models are automatically downloaded from GitHub as they are already included in the repository.*
