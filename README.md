@@ -152,7 +152,7 @@ laboratory-waves/
   <em>Transfer function predicted by physical parameters obtained through the 2D-only-magnitude CNN inference model (represented as simulation) vs the ground truth (represented as experiment).</em>
 </p>
 
-All data discussion is located in notebooks/results_analysis.ipynb.
+> *Note:* All data discussion is located in `notebooks/results_analysis.ipynb.`
 
 ## References
 
