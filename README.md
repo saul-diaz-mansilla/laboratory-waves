@@ -23,10 +23,10 @@ To address this, we developed a fast forward model using an RK4 ODE solver that 
    ```
 
 3. **Get the data:**
-   Because running tens of thousands of detailed RK4 simulations takes a long time, we strongly advise downloading the heavy, pre-computed simulation datasets from Google Drive. Place them in data/simulated/:
+   Because running tens of thousands of detailed RK4 simulations takes a long time, we strongly advise downloading the heavy, pre-computed simulation datasets from Google Drive:
    - [Download Simulated Data Here](https://drive.google.com/drive/folders/1u-HSRnly0iDv49bZHjdgKWLGJ4ZRDhj4?usp=drive_link)
    
-   *Note: The trained neural network models are automatically downloaded from GitHub as they are already included in the repository.*
+   *Note: Place the downloaded folders in* `data/simulated/`
    
    If you prefer to generate the data yourself, you may run the following scripts (warning: lengthy processes):
 
@@ -39,6 +39,8 @@ To address this, we developed a fast forward model using an RK4 ODE solver that 
    ```bash
    ./train_models.sh
    ```
+   
+   *Note: The trained neural network models are automatically downloaded from GitHub as they are already included in the repository.*
 
 4. **Run the pipeline:**
    Once dependencies and data are ready, execute the entire pipeline:
